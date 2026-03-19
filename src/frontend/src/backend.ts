@@ -207,6 +207,7 @@ export interface Message {
     reactions: Array<[Principal, string]>;
 }
 export type FileId = bigint;
+export type DiscoveryMode = { Open: null } | { IdOnly: null } | { Hidden: null };
 export interface EncryptedEmailConfig {
     senderEmail: string;
     encryptedApiKey: Uint8Array;
@@ -286,6 +287,7 @@ export interface backendInterface {
     getMyStatuses(): Promise<Array<StatusUpdate>>;
     getNotifications(limit: bigint): Promise<Array<Notification>>;
     getPendingRequests(): Promise<Array<[Contact, PublicProfile]>>;
+    getDiscoveryMode(): Promise<DiscoveryMode>;
     getProfile(): Promise<Profile | null>;
     getPublicKey(principal: Principal): Promise<Uint8Array | null>;
     getPublicKeys(principals: Array<Principal>): Promise<Array<[Principal, Uint8Array]>>;
@@ -323,6 +325,7 @@ export interface backendInterface {
     setDisappearingTimer(conversationId: bigint, timer: DisappearingTimer): Promise<void>;
     setEncryptedEmailConfig(encryptedApiKey: Uint8Array, senderEmail: string): Promise<void>;
     setProfile(name: string, bio: string, avatar: ExternalBlob | null): Promise<void>;
+    updateDiscoveryMode(mode: DiscoveryMode): Promise<void>;
     setTwoFactorEnabled(enabled: boolean): Promise<void>;
     setTyping(conversationId: bigint): Promise<void>;
     startDirectChat(target: Principal): Promise<bigint>;
@@ -860,6 +863,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getShareId();
+            return result;
+        }
+    }
+    async getDiscoveryMode(): Promise<DiscoveryMode> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getDiscoveryMode();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getDiscoveryMode();
+            return result;
+        }
+    }
+    async updateDiscoveryMode(arg0: DiscoveryMode): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateDiscoveryMode(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateDiscoveryMode(arg0);
             return result;
         }
     }

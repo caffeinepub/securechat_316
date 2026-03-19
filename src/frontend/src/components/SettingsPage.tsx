@@ -20,6 +20,9 @@ import {
   Loader2,
   Lock,
   LogOut,
+  Monitor,
+  Moon,
+  Sun,
   UserSearch,
 } from "lucide-react";
 import { ChevronRight } from "lucide-react";
@@ -30,6 +33,7 @@ import {
   useProfile,
   useUpdateDiscoveryMode,
 } from "../hooks/useQueries";
+import { useTheme } from "../hooks/useTheme";
 import { BackupRestoreSection } from "./BackupRestoreSection";
 import { BlockedUsersDialog } from "./BlockedUsersDialog";
 import { EditProfileDialog } from "./EditProfileDialog";
@@ -78,13 +82,69 @@ const DISCOVERY_OPTIONS: {
   },
 ];
 
+const THEME_OPTIONS: {
+  key: "light" | "dark" | "system";
+  label: string;
+  icon: React.ElementType;
+}[] = [
+  { key: "light", label: "Light", icon: Sun },
+  { key: "system", label: "System", icon: Monitor },
+  { key: "dark", label: "Dark", icon: Moon },
+];
+
+function AppearanceSection() {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <div className="px-4 py-3 space-y-3" data-ocid="settings.appearance.panel">
+      <div className="flex items-center gap-2">
+        <Sun className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm font-medium">Appearance</span>
+      </div>
+
+      <ToggleGroup
+        type="single"
+        value={theme}
+        onValueChange={(val) => {
+          if (val) setTheme(val as "light" | "dark" | "system");
+        }}
+        className="grid grid-cols-3 gap-1.5 w-full"
+        data-ocid="settings.appearance.toggle"
+      >
+        {THEME_OPTIONS.map((opt) => {
+          const Icon = opt.icon;
+          return (
+            <ToggleGroupItem
+              key={opt.key}
+              value={opt.key}
+              aria-label={opt.label}
+              className="flex flex-col items-center gap-1 h-auto py-2.5 px-2 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground rounded-lg border"
+            >
+              <Icon className="w-4 h-4" />
+              <span className="font-medium">{opt.label}</span>
+            </ToggleGroupItem>
+          );
+        })}
+      </ToggleGroup>
+
+      <p className="text-xs text-muted-foreground">
+        {theme === "system"
+          ? "Follows your device settings"
+          : theme === "dark"
+            ? "Always use dark mode"
+            : "Always use light mode"}
+      </p>
+    </div>
+  );
+}
+
 function ProfileVisibilitySection() {
   const { data: currentMode, isLoading: isLoadingMode } = useDiscoveryMode();
   const { mutateAsync: updateMode, isPending } = useUpdateDiscoveryMode();
 
   const currentKey: DiscoveryKey = currentMode
     ? discoveryModeToKey(currentMode)
-    : "IdOnly";
+    : "Open";
 
   async function handleChange(value: string) {
     if (!value || value === currentKey) return;
@@ -186,6 +246,16 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
               <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
             </button>
           )}
+
+          {/* Appearance */}
+          <div>
+            <h2 className="text-xs font-semibold uppercase text-muted-foreground mb-2 tracking-wider px-1">
+              Appearance
+            </h2>
+            <div className="rounded-xl border divide-y">
+              <AppearanceSection />
+            </div>
+          </div>
 
           {/* Privacy & Security */}
           <div>

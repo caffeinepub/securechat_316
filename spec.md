@@ -1,37 +1,27 @@
 # SecureChat
 
 ## Current State
-- Users have a `Profile` type with `name`, `bio`, `avatar`, `lastSeen`, `email`, `emailVerified`, `twoFactorEnabled`
-- `searchUsers` performs a case-insensitive name substring match against all users — no visibility filtering
-- `addContactByPrincipal` allows adding any user by their II principal text
-- Settings page has a "Privacy & Security" section with Blocked Users and Email Verification
-- No `discoveryMode` field exists anywhere in the profile
+The app has both `:root` (light) and `.dark` (dark) CSS variable sets fully defined in `index.css`. There is no theme switching mechanism -- the app always renders in light mode. SettingsPage has Privacy & Security, Email Service, Data, and About sections plus a logout button.
 
 ## Requested Changes (Diff)
 
 ### Add
-- `discoveryMode` variant field to `Profile` type: `#Open | #IdOnly | #Hidden`, default `#IdOnly`
-- `updateDiscoveryMode(mode)` backend function so users can change their own setting
-- Filtering in `searchUsers`: only return users whose `discoveryMode` is `#Open`
-- Filtering in `addContactByPrincipal` / principal lookup: allow finding users whose `discoveryMode` is `#Open` or `#IdOnly`; block `#Hidden` users from being found at all
-- `getDiscoveryMode()` query so the frontend can read the current user's setting
-- Profile Visibility selector in Settings > Privacy & Security (three options: Open / ID only / Hidden)
-- Toast notification in the app when the user saves a new visibility setting
+- `ThemeProvider` context (`src/frontend/src/hooks/useTheme.tsx`) that:
+  - Manages theme state: `"light"`, `"dark"`, or `"system"`
+  - On mount, reads saved preference from `localStorage` (key: `"theme"`); defaults to `"system"` if none saved
+  - When `"system"`, applies `dark` class based on `window.matchMedia("(prefers-color-scheme: dark)")` and listens for changes
+  - Applies/removes `dark` class on `<html>` element reactively
+  - Saves preference to `localStorage` on change
+- `ThemeToggle` component (inline in SettingsPage or separate) -- a 3-option toggle (Light / System / Dark) placed in a new "Appearance" section in SettingsPage, above Privacy & Security
 
 ### Modify
-- `setProfile` must persist `discoveryMode` (not reset it on profile update)
-- `PublicProfile` does NOT expose `discoveryMode` to other users
+- `App.tsx`: wrap the app in `ThemeProvider`
+- `SettingsPage.tsx`: add Appearance section with the theme toggle
 
 ### Remove
-- Nothing removed
- 
+- Nothing
+
 ## Implementation Plan
-1. Add `discoveryMode` variant type to backend
-2. Add field to `Profile` record with default `#IdOnly` for new and existing users
-3. Add `getDiscoveryMode()` query function
-4. Add `updateDiscoveryMode(mode)` update function
-5. Filter `searchUsers` — only `#Open` users appear in name search
-6. Filter principal-based lookup — `#Hidden` users cannot be found even by principal
-7. Frontend: add `useDiscoveryMode` query hook and `useUpdateDiscoveryMode` mutation hook
-8. Frontend: add visibility selector in Settings Privacy & Security section
-9. Frontend: show toast on successful save
+1. Create `src/frontend/src/hooks/useTheme.tsx` with `ThemeProvider` and `useTheme` hook
+2. Wrap app root in `ThemeProvider` in `App.tsx`
+3. Add Appearance section to `SettingsPage.tsx` with a 3-way toggle (Light / System / Dark) using `ToggleGroup`

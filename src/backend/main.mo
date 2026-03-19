@@ -544,7 +544,7 @@ actor {
     requireAuth(caller);
     switch (userDiscoveryModes.get(caller)) {
       case (?m) { m };
-      case (null) { #IdOnly };
+      case (null) { #Open };
     };
   };
 
@@ -569,7 +569,7 @@ actor {
       Runtime.trap("Cannot send request to this user");
     };
     // Hidden users cannot be found or added by anyone
-    let targetMode = switch (userDiscoveryModes.get(target)) { case (?m) m; case (null) #IdOnly };
+    let targetMode = switch (userDiscoveryModes.get(target)) { case (?m) m; case (null) #Open };
     switch (targetMode) {
       case (#Hidden) { Runtime.trap("User not found") };
       case (_) {};
@@ -745,7 +745,7 @@ actor {
     var count = 0;
     for ((p, prof) in userProfiles.entries()) {
       if (count < 20 and p != caller) {
-        let discoveryMode = switch (userDiscoveryModes.get(p)) { case (?m) m; case (null) #IdOnly };
+        let discoveryMode = switch (userDiscoveryModes.get(p)) { case (?m) m; case (null) #Open };
         switch (discoveryMode) {
           case (#Open) {
             let nameLower = prof.name.toLower();
@@ -781,7 +781,7 @@ actor {
       Runtime.trap("Cannot send request to this user");
     };
     // Hidden users cannot be found or added by anyone
-    let targetMode = switch (userDiscoveryModes.get(target)) { case (?m) m; case (null) #IdOnly };
+    let targetMode = switch (userDiscoveryModes.get(target)) { case (?m) m; case (null) #Open };
     switch (targetMode) {
       case (#Hidden) { Runtime.trap("User not found") };
       case (_) {};

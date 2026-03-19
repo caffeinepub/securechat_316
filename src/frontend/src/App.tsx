@@ -21,8 +21,17 @@ import {
   useProfile,
   useUnreadCount,
 } from "./hooks/useQueries";
+import { ThemeProvider } from "./hooks/useTheme";
 
 export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
+  );
+}
+
+function AppContent() {
   const { identity, isInitializing, login, clear } = useInternetIdentity();
   const { actor } = useActor();
   const queryClient = useQueryClient();

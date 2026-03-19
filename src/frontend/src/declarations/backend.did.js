@@ -93,6 +93,11 @@ export const DisappearingTimer = IDL.Variant({
   'Days7' : IDL.Null,
   'Hours24' : IDL.Null,
 });
+export const DiscoveryMode = IDL.Variant({
+  'Open' : IDL.Null,
+  'IdOnly' : IDL.Null,
+  'Hidden' : IDL.Null,
+});
 export const EncryptedEmailConfig = IDL.Record({
   'senderEmail' : IDL.Text,
   'encryptedApiKey' : IDL.Vec(IDL.Nat8),
@@ -215,6 +220,7 @@ export const idlService = IDL.Service({
     ),
   'getConversations' : IDL.Func([], [IDL.Vec(ConversationPreview)], ['query']),
   'getDisappearingTimer' : IDL.Func([IDL.Nat], [DisappearingTimer], ['query']),
+  'getDiscoveryMode' : IDL.Func([], [DiscoveryMode], ['query']),
   'getEmailVerificationStatus' : IDL.Func(
       [],
       [IDL.Record({ 'verified' : IDL.Bool, 'email' : IDL.Opt(IDL.Text) })],
@@ -331,6 +337,7 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'unblockUser' : IDL.Func([IDL.Principal], [], []),
+  'updateDiscoveryMode' : IDL.Func([DiscoveryMode], [], []),
   'updateGroup' : IDL.Func(
       [IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(ExternalBlob)],
       [],
@@ -432,6 +439,11 @@ export const idlFactory = ({ IDL }) => {
     'Days30' : IDL.Null,
     'Days7' : IDL.Null,
     'Hours24' : IDL.Null,
+  });
+  const DiscoveryMode = IDL.Variant({
+    'Open' : IDL.Null,
+    'IdOnly' : IDL.Null,
+    'Hidden' : IDL.Null,
   });
   const EncryptedEmailConfig = IDL.Record({
     'senderEmail' : IDL.Text,
@@ -563,6 +575,7 @@ export const idlFactory = ({ IDL }) => {
         [DisappearingTimer],
         ['query'],
       ),
+    'getDiscoveryMode' : IDL.Func([], [DiscoveryMode], ['query']),
     'getEmailVerificationStatus' : IDL.Func(
         [],
         [IDL.Record({ 'verified' : IDL.Bool, 'email' : IDL.Opt(IDL.Text) })],
@@ -695,6 +708,7 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'unblockUser' : IDL.Func([IDL.Principal], [], []),
+    'updateDiscoveryMode' : IDL.Func([DiscoveryMode], [], []),
     'updateGroup' : IDL.Func(
         [IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(ExternalBlob)],
         [],
