@@ -284,7 +284,12 @@ export function useDiscoveryMode() {
     queryKey: ["discoveryMode", identity?.getPrincipal().toString()],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not ready");
-      return (actor as any).getDiscoveryMode() as Promise<DiscoveryMode>;
+      return (
+        actor as unknown as {
+          getDiscoveryMode(): Promise<DiscoveryMode>;
+          updateDiscoveryMode(m: DiscoveryMode): Promise<void>;
+        }
+      ).getDiscoveryMode();
     },
     enabled: !!actor && !!identity,
   });
@@ -298,7 +303,12 @@ export function useUpdateDiscoveryMode() {
   return useMutation({
     mutationFn: async (mode: DiscoveryMode) => {
       if (!actor) throw new Error("Actor not ready");
-      await (actor as any).updateDiscoveryMode(mode);
+      await (
+        actor as unknown as {
+          getDiscoveryMode(): Promise<DiscoveryMode>;
+          updateDiscoveryMode(m: DiscoveryMode): Promise<void>;
+        }
+      ).updateDiscoveryMode(mode);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
