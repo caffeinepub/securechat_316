@@ -128,7 +128,9 @@ export function EditProfileDialog({
               selectedFile={avatarFile}
             />
             <div>
-              <Label htmlFor="edit-name">Display name</Label>
+              <Label htmlFor="edit-name" className="text-foreground">
+                Display name
+              </Label>
               <Input
                 id="edit-name"
                 value={name}
@@ -141,7 +143,9 @@ export function EditProfileDialog({
               />
             </div>
             <div>
-              <Label htmlFor="edit-bio">Bio</Label>
+              <Label htmlFor="edit-bio" className="text-foreground">
+                Bio
+              </Label>
               <Textarea
                 id="edit-bio"
                 value={bio}

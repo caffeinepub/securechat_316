@@ -89,7 +89,9 @@ export function BackupRestoreSection() {
       }
       const result = await importData(data);
       toast.success(
-        `Backup restored: ${result.contactsRequested} contact request${result.contactsRequested !== 1n ? "s" : ""} sent`,
+        `Backup restored: ${result.contactsRequested} contact request${
+          result.contactsRequested !== 1n ? "s" : ""
+        } sent`,
       );
       setShowPasswordDialog(null);
       setPassword("");
@@ -123,12 +125,13 @@ export function BackupRestoreSection() {
         <Button
           variant="outline"
           size="sm"
-          className="flex-1 gap-1.5"
+          className="flex-1 gap-1.5 text-foreground"
           onClick={() => {
             setPassword("");
             setShowPasswordDialog("export");
           }}
           disabled={isBusy}
+          data-ocid="settings.data.export.button"
         >
           {isExporting ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -140,9 +143,10 @@ export function BackupRestoreSection() {
         <Button
           variant="outline"
           size="sm"
-          className="flex-1 gap-1.5"
+          className="flex-1 gap-1.5 text-foreground"
           onClick={() => fileInputRef.current?.click()}
           disabled={isBusy}
+          data-ocid="settings.data.import.button"
         >
           {isImporting ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -176,7 +180,9 @@ export function BackupRestoreSection() {
               </DialogTitle>
             </DialogHeader>
             <div className="py-4">
-              <Label htmlFor="backup-password">Password</Label>
+              <Label htmlFor="backup-password" className="text-foreground">
+                Password
+              </Label>
               <Input
                 id="backup-password"
                 type="password"

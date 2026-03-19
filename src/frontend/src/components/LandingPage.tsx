@@ -59,7 +59,7 @@ const FEATURES = [
 
 export function LandingPage({ onGetStarted }: LandingPageProps) {
   return (
-    <div className="min-h-screen bg-white font-sans">
+    <div className="min-h-screen bg-white dark:bg-slate-950 font-sans">
       <LandingNav />
       <HeroSection onGetStarted={onGetStarted} />
       <FeaturesSection />
@@ -70,13 +70,13 @@ export function LandingPage({ onGetStarted }: LandingPageProps) {
 
 function LandingNav() {
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 border-b border-slate-100 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm">
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center shadow-sm">
             <Lock className="w-4 h-4 text-white" />
           </div>
-          <span className="text-lg font-semibold tracking-tight text-slate-900">
+          <span className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
             SecureChat
           </span>
         </div>
@@ -89,23 +89,25 @@ function LandingNav() {
 
 function HeroSection({ onGetStarted }: { onGetStarted: () => void }) {
   return (
-    <section className="relative overflow-hidden bg-white">
+    <section className="relative overflow-hidden bg-white dark:bg-slate-950">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-10%,rgba(13,148,136,0.08),transparent)] pointer-events-none" />
 
       <div className="relative max-w-6xl mx-auto px-6 pt-20 pb-0">
         <div className="flex justify-center mb-8 opacity-0 animate-fade-up">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 bg-teal-50 px-3.5 py-1 text-xs font-medium text-teal-700 shadow-xs">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-950 px-3.5 py-1 text-xs font-medium text-teal-700 dark:text-teal-300 shadow-xs">
             <Lock className="w-3 h-3" />
             Private & Encrypted
           </span>
         </div>
 
-        <h1 className="text-center font-serif text-5xl sm:text-6xl lg:text-[4.5rem] font-semibold leading-[1.08] tracking-tight text-slate-900 max-w-3xl mx-auto mb-6 opacity-0 animate-fade-up-delay">
+        <h1 className="text-center font-serif text-5xl sm:text-6xl lg:text-[4.5rem] font-semibold leading-[1.08] tracking-tight text-slate-900 dark:text-white max-w-3xl mx-auto mb-6 opacity-0 animate-fade-up-delay">
           Private Messaging,{" "}
-          <em className="not-italic text-teal-600">Built for Trust</em>
+          <em className="not-italic text-teal-600 dark:text-teal-400">
+            Built for Trust
+          </em>
         </h1>
 
-        <p className="text-center text-slate-500 text-base sm:text-lg max-w-xl mx-auto mb-10 leading-relaxed opacity-0 animate-fade-up-delay-2">
+        <p className="text-center text-slate-500 dark:text-slate-400 text-base sm:text-lg max-w-xl mx-auto mb-10 leading-relaxed opacity-0 animate-fade-up-delay-2">
           Secure 1:1 and group chats, file sharing, and status updates — all
           running on the Internet Computer with Internet Identity
           authentication.
@@ -115,7 +117,7 @@ function HeroSection({ onGetStarted }: { onGetStarted: () => void }) {
           <Button
             size="lg"
             onClick={onGetStarted}
-            className="bg-slate-900 hover:bg-slate-700 text-white rounded-full px-8 h-12 text-sm font-medium group transition-all duration-200"
+            className="bg-slate-900 hover:bg-slate-700 dark:bg-teal-600 dark:hover:bg-teal-500 text-white rounded-full px-8 h-12 text-sm font-medium group transition-all duration-200"
           >
             Get Started with Internet Identity
             <ChevronRight className="ml-1.5 w-4 h-4 transition-transform group-hover:translate-x-0.5" />
@@ -125,7 +127,7 @@ function HeroSection({ onGetStarted }: { onGetStarted: () => void }) {
         <PhoneMockup />
       </div>
 
-      <div className="h-24 bg-gradient-to-b from-white to-slate-50" />
+      <div className="h-24 bg-gradient-to-b from-white dark:from-slate-950 to-slate-50 dark:to-slate-900" />
     </section>
   );
 }
@@ -251,24 +253,24 @@ const accentStyles: Record<
   { card: string; icon: string; iconText: string }
 > = {
   teal: {
-    card: "border-teal-100",
-    icon: "bg-teal-50",
-    iconText: "text-teal-600",
+    card: "border-teal-100 dark:border-teal-900",
+    icon: "bg-teal-50 dark:bg-teal-950",
+    iconText: "text-teal-600 dark:text-teal-400",
   },
   slate: {
-    card: "border-slate-200",
-    icon: "bg-slate-100",
-    iconText: "text-slate-600",
+    card: "border-slate-200 dark:border-slate-700",
+    icon: "bg-slate-100 dark:bg-slate-800",
+    iconText: "text-slate-600 dark:text-slate-300",
   },
   indigo: {
-    card: "border-indigo-100",
-    icon: "bg-indigo-50",
-    iconText: "text-indigo-600",
+    card: "border-indigo-100 dark:border-indigo-900",
+    icon: "bg-indigo-50 dark:bg-indigo-950",
+    iconText: "text-indigo-600 dark:text-indigo-400",
   },
   amber: {
-    card: "border-amber-100",
-    icon: "bg-amber-50",
-    iconText: "text-amber-600",
+    card: "border-amber-100 dark:border-amber-900",
+    icon: "bg-amber-50 dark:bg-amber-950",
+    iconText: "text-amber-600 dark:text-amber-400",
   },
 };
 
@@ -287,7 +289,7 @@ function FloatingCard({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-2xl border bg-white px-4 py-3 shadow-md w-52",
+        "flex items-center gap-3 rounded-2xl border bg-white dark:bg-slate-900 px-4 py-3 shadow-md w-52",
         s.card,
       )}
     >
@@ -300,8 +302,12 @@ function FloatingCard({
         <Icon className={cn("w-4 h-4", s.iconText)} />
       </div>
       <div>
-        <div className="text-[12px] font-semibold text-slate-800">{label}</div>
-        <div className="text-[10px] text-slate-400 mt-0.5">{sublabel}</div>
+        <div className="text-[12px] font-semibold text-slate-800 dark:text-slate-100">
+          {label}
+        </div>
+        <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+          {sublabel}
+        </div>
       </div>
     </div>
   );
@@ -309,13 +315,13 @@ function FloatingCard({
 
 function FeaturesSection() {
   return (
-    <section className="bg-slate-50 py-24 px-6">
+    <section className="bg-slate-50 dark:bg-slate-900 py-24 px-6">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="font-serif text-4xl font-semibold text-slate-900 mb-4 tracking-tight">
+          <h2 className="font-serif text-4xl font-semibold text-slate-900 dark:text-white mb-4 tracking-tight">
             Everything you need to communicate privately
           </h2>
-          <p className="text-slate-500 max-w-lg mx-auto text-base leading-relaxed">
+          <p className="text-slate-500 dark:text-slate-400 max-w-lg mx-auto text-base leading-relaxed">
             SecureChat brings the best of modern messaging to the Internet
             Computer — with real on-chain data ownership.
           </p>
@@ -325,15 +331,15 @@ function FeaturesSection() {
           {FEATURES.map((feature) => (
             <div
               key={feature.title}
-              className="bg-white rounded-2xl p-6 border border-slate-100 shadow-xs hover:shadow-md transition-shadow duration-200 group"
+              className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700 shadow-xs hover:shadow-md transition-shadow duration-200 group"
             >
-              <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center mb-4 group-hover:bg-teal-100 transition-colors duration-200">
-                <feature.icon className="w-5 h-5 text-teal-600" />
+              <div className="w-10 h-10 bg-teal-50 dark:bg-teal-950 rounded-xl flex items-center justify-center mb-4 group-hover:bg-teal-100 dark:group-hover:bg-teal-900 transition-colors duration-200">
+                <feature.icon className="w-5 h-5 text-teal-600 dark:text-teal-400" />
               </div>
-              <h3 className="font-semibold text-slate-900 mb-2 text-sm">
+              <h3 className="font-semibold text-slate-900 dark:text-white mb-2 text-sm">
                 {feature.title}
               </h3>
-              <p className="text-sm text-slate-500 leading-relaxed">
+              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
                 {feature.description}
               </p>
             </div>
@@ -361,7 +367,17 @@ function LandingFooter() {
           your data, your keys, your control.
         </p>
 
-        <p className="text-slate-600 text-xs">© 2025 SecureChat</p>
+        <p className="text-slate-500 text-xs">
+          © {new Date().getFullYear()}. Built with ❤️ using{" "}
+          <a
+            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-teal-400 hover:text-teal-300 transition-colors"
+          >
+            caffeine.ai
+          </a>
+        </p>
       </div>
     </footer>
   );

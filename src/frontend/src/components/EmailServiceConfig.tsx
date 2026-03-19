@@ -191,13 +191,13 @@ export function EmailServiceConfig() {
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-medium">Email Service</p>
+            <p className="text-sm font-medium text-foreground">Email Service</p>
             {fullyConfigured ? (
               <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary uppercase tracking-wider">
                 Active
               </span>
             ) : (
-              <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 uppercase tracking-wider">
+              <span className="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
                 Incomplete
               </span>
             )}
@@ -245,7 +245,9 @@ export function EmailServiceConfig() {
                 </a>{" "}
                 to send verification emails. Create a free account, go to API
                 Keys in the dashboard, and generate a new key (starts with{" "}
-                <code className="bg-muted px-1 rounded text-[11px]">re_</code>
+                <code className="bg-muted px-1 rounded text-[11px] text-foreground">
+                  re_
+                </code>
                 ).
               </p>
             </div>
@@ -256,7 +258,7 @@ export function EmailServiceConfig() {
               <p>
                 You need a verified sender address. Either verify your own
                 domain in Resend, or use their test address{" "}
-                <code className="bg-muted px-1 rounded text-[11px]">
+                <code className="bg-muted px-1 rounded text-[11px] text-foreground">
                   onboarding@resend.dev
                 </code>{" "}
                 for trying it out.
@@ -275,9 +277,7 @@ export function EmailServiceConfig() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Key className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">
-              API Key
-            </span>
+            <span className="text-xs font-medium text-foreground">API Key</span>
           </div>
           {keyConfigured && !editingKey && (
             <div className="flex items-center gap-1.5">
@@ -352,7 +352,7 @@ export function EmailServiceConfig() {
               setEditingKey(true);
               setError("");
             }}
-            className="text-xs h-7"
+            className="text-xs h-7 text-foreground"
           >
             {keyConfigured ? "Update Key" : "Set API Key"}
           </Button>
@@ -364,7 +364,7 @@ export function EmailServiceConfig() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-xs font-medium text-muted-foreground">
+            <span className="text-xs font-medium text-foreground">
               Sender Email
             </span>
           </div>
@@ -442,7 +442,7 @@ export function EmailServiceConfig() {
               setSenderInput(storedSender || "");
               setError("");
             }}
-            className="text-xs h-7"
+            className="text-xs h-7 text-foreground"
           >
             {senderConfigured ? "Update Sender" : "Set Sender Email"}
           </Button>

@@ -196,7 +196,9 @@ export function EmailVerificationSection() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <p className="text-sm font-medium">Email Verified</p>
+                <p className="text-sm font-medium text-foreground">
+                  Email Verified
+                </p>
                 <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary uppercase tracking-wider">
                   Verified
                 </span>
@@ -235,7 +237,9 @@ export function EmailVerificationSection() {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">Login Verification</p>
+              <p className="text-sm font-medium text-foreground">
+                Login Verification
+              </p>
               <p className="text-xs text-muted-foreground">
                 Require email code after signing in
               </p>
@@ -260,7 +264,9 @@ export function EmailVerificationSection() {
             <Mail className="w-4 h-4 text-muted-foreground" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium">Enter verification code</p>
+            <p className="text-sm font-medium text-foreground">
+              Enter verification code
+            </p>
             <p className="text-xs text-muted-foreground">Sent to {email}</p>
           </div>
         </div>
@@ -353,7 +359,9 @@ export function EmailVerificationSection() {
           />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">Two-Factor Authentication</p>
+          <p className="text-sm font-medium text-foreground">
+            Two-Factor Authentication
+          </p>
           <p className="text-xs text-muted-foreground">
             Add a second layer of security with email verification
           </p>
@@ -366,7 +374,7 @@ export function EmailVerificationSection() {
               setStep("entering-email");
               setError("");
             }}
-            className="text-xs shrink-0"
+            className="text-xs shrink-0 text-foreground"
           >
             Set Up
           </Button>

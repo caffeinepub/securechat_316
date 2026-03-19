@@ -19,6 +19,7 @@ import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import {
   useConversations,
   useProfile,
+  useTwoFactorStatus,
   useUnreadCount,
 } from "./hooks/useQueries";
 import { ThemeProvider } from "./hooks/useTheme";
@@ -37,6 +38,9 @@ function AppContent() {
   const queryClient = useQueryClient();
   const isAuthenticated = !!identity;
   const [twoFactorVerified, setTwoFactorVerified] = useState(false);
+
+  // Query 2FA status — only matters once actor is ready
+  const { data: tfStatus, isLoading: isTfLoading } = useTwoFactorStatus();
 
   // Reset 2FA verification when identity changes (logout/login)
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
@@ -75,7 +79,18 @@ function AppContent() {
     );
   }
 
-  if (!twoFactorVerified) {
+  // Wait until we know whether 2FA is enabled
+  if (isTfLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Only show the 2FA gate when 2FA is actually enabled and not yet verified
+  const twoFactorEnabled = tfStatus?.enabled === true;
+  if (twoFactorEnabled && !twoFactorVerified) {
     return (
       <>
         <TwoFactorGate
