@@ -48,10 +48,15 @@ export function useProfile() {
     queryKey: ["profile", identity?.getPrincipal().toString()],
     queryFn: async () => {
       if (!actor) throw new Error("Actor not ready");
-      const result = await actor.getProfile();
-      return result ?? null;
+      try {
+        const result = await actor.getProfile();
+        return result ?? null;
+      } catch {
+        return null;
+      }
     },
     enabled: !!actor && !!identity,
+    retry: 0,
   });
 }
 
@@ -977,6 +982,7 @@ export function useTwoFactorStatus() {
     },
     enabled: !!actor && !!identity,
     staleTime: Number.POSITIVE_INFINITY,
+    retry: 0,
   });
 }
 

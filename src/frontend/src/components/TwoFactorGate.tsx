@@ -25,7 +25,7 @@ interface TwoFactorGateProps {
 export function TwoFactorGate({ onVerified, onLogout }: TwoFactorGateProps) {
   const { actor } = useActor();
   const { identity } = useInternetIdentity();
-  const { data: tfStatus, isLoading } = useTwoFactorStatus();
+  const { data: tfStatus, isLoading, isError } = useTwoFactorStatus();
   const { mutate: requestOtp, isPending: isSendingOtp } = useRequestLoginOtp();
   const { mutate: verifyOtp, isPending: isVerifyingOtp } = useVerifyLoginOtp();
 
@@ -33,12 +33,12 @@ export function TwoFactorGate({ onVerified, onLogout }: TwoFactorGateProps) {
   const [error, setError] = useState("");
   const otpRequestedRef = useRef(false);
 
-  // If 2FA is not enabled, pass through immediately
+  // If 2FA is not enabled, or status couldn't be fetched, pass through immediately
   useEffect(() => {
-    if (!isLoading && tfStatus && !tfStatus.enabled) {
+    if (!isLoading && (isError || !tfStatus?.enabled)) {
       onVerified();
     }
-  }, [isLoading, tfStatus, onVerified]);
+  }, [isLoading, isError, tfStatus, onVerified]);
 
   // Auto-send OTP when gate mounts and 2FA is enabled
   useEffect(() => {
@@ -123,7 +123,7 @@ export function TwoFactorGate({ onVerified, onLogout }: TwoFactorGateProps) {
   }, [actor, identity, requestOtp]);
 
   // Loading state
-  if (isLoading || (!tfStatus?.enabled && tfStatus !== undefined)) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

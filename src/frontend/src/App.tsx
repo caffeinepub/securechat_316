@@ -40,7 +40,7 @@ function AppContent() {
   const [twoFactorVerified, setTwoFactorVerified] = useState(false);
 
   // Query 2FA status — only matters once actor is ready
-  const { data: tfStatus, isLoading: isTfLoading } = useTwoFactorStatus();
+  const { data: tfStatus } = useTwoFactorStatus();
 
   // Reset 2FA verification when identity changes (logout/login)
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
@@ -72,15 +72,6 @@ function AppContent() {
   }
 
   if (!actor) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  // Wait until we know whether 2FA is enabled
-  if (isTfLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -134,7 +125,7 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  const hasProfile = profile?.name;
+  const hasProfile = !isProfileError && profile?.name;
 
   const handleOpenChat = (conversationId: bigint) => {
     setActiveConversationId(conversationId);
@@ -148,14 +139,6 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (isProfileError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-destructive">Failed to load profile.</p>
       </div>
     );
   }
