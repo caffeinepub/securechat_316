@@ -32,7 +32,8 @@ interface AppShellProps {
   onLogout: () => void;
   onSearch?: () => void;
   onNotifications?: () => void;
-  unreadCount?: number;
+  messageUnreadCount?: number;
+  bellUnreadCount?: number;
 }
 
 const NAV_ITEMS: { page: Page; icon: typeof MessageSquare; label: string }[] = [
@@ -51,7 +52,8 @@ export function AppShell({
   onLogout,
   onSearch,
   onNotifications,
-  unreadCount = 0,
+  messageUnreadCount = 0,
+  bellUnreadCount = 0,
 }: AppShellProps) {
   const isMobile = useIsMobile();
 
@@ -64,7 +66,8 @@ export function AppShell({
           onNavigate={onNavigate}
           onSearch={onSearch}
           onNotifications={onNotifications}
-          unreadCount={unreadCount}
+          messageUnreadCount={messageUnreadCount}
+          bellUnreadCount={bellUnreadCount}
         />
       </div>
     );
@@ -80,7 +83,8 @@ export function AppShell({
         onLogout={onLogout}
         onSearch={onSearch}
         onNotifications={onNotifications}
-        unreadCount={unreadCount}
+        messageUnreadCount={messageUnreadCount}
+        bellUnreadCount={bellUnreadCount}
       />
       <div className="flex-1 min-w-0 overflow-hidden">{children}</div>
     </div>
@@ -95,7 +99,8 @@ function DesktopSidebar({
   onLogout,
   onSearch,
   onNotifications,
-  unreadCount,
+  messageUnreadCount,
+  bellUnreadCount,
 }: {
   currentPage: Page;
   onNavigate: (page: Page) => void;
@@ -104,7 +109,8 @@ function DesktopSidebar({
   onLogout: () => void;
   onSearch?: () => void;
   onNotifications?: () => void;
-  unreadCount: number;
+  messageUnreadCount: number;
+  bellUnreadCount: number;
 }) {
   return (
     <TooltipProvider delayDuration={200}>
@@ -143,9 +149,9 @@ function DesktopSidebar({
                   className="relative w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-150 text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent mb-2"
                 >
                   <Bell className="w-[20px] h-[20px]" strokeWidth={1.8} />
-                  {unreadCount > 0 && (
+                  {bellUnreadCount > 0 && (
                     <span className="absolute top-1.5 right-1.5 min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-1">
-                      {unreadCount > 99 ? "99+" : unreadCount}
+                      {bellUnreadCount > 99 ? "99+" : bellUnreadCount}
                     </span>
                   )}
                 </button>
@@ -174,6 +180,11 @@ function DesktopSidebar({
                       className="w-[20px] h-[20px]"
                       strokeWidth={isActive ? 2.2 : 1.8}
                     />
+                    {page === "chats" && messageUnreadCount > 0 && (
+                      <span className="absolute top-1.5 right-1.5 min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-1">
+                        {messageUnreadCount > 99 ? "99+" : messageUnreadCount}
+                      </span>
+                    )}
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={12}>
@@ -233,13 +244,15 @@ function MobileNav({
   onNavigate,
   onSearch,
   onNotifications,
-  unreadCount = 0,
+  messageUnreadCount = 0,
+  bellUnreadCount = 0,
 }: {
   currentPage: Page;
   onNavigate: (page: Page) => void;
   onSearch?: () => void;
   onNotifications?: () => void;
-  unreadCount?: number;
+  messageUnreadCount?: number;
+  bellUnreadCount?: number;
 }) {
   const mobileItems: {
     key: string;
@@ -300,6 +313,12 @@ function MobileNav({
       <div className="flex items-center justify-around h-14">
         {mobileItems.map(({ key, icon: Icon, label, action, isPage }) => {
           const isActive = isPage && currentPage === key;
+          const badgeCount =
+            key === "notifications"
+              ? bellUnreadCount
+              : key === "chats"
+                ? messageUnreadCount
+                : 0;
           return (
             <button
               type="button"
@@ -312,9 +331,9 @@ function MobileNav({
             >
               <div className="relative">
                 <Icon className="w-5 h-5" strokeWidth={isActive ? 2.2 : 1.8} />
-                {key === "notifications" && unreadCount > 0 && (
+                {badgeCount > 0 && (
                   <span className="absolute -top-1.5 -right-2 min-w-4 h-4 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center px-0.5">
-                    {unreadCount > 99 ? "99+" : unreadCount}
+                    {badgeCount > 99 ? "99+" : badgeCount}
                   </span>
                 )}
               </div>

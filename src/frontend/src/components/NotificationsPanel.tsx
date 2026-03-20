@@ -30,13 +30,18 @@ export function NotificationsPanel({
   const { mutate: markRead, isPending } = useMarkNotificationsRead();
   const { mutate: toggleRead } = useToggleNotificationRead();
 
-  const hasUnread = notifications.some((n) => !n.read);
+  // Filter out message notifications -- those are shown on the chats icon badge
+  const visibleNotifications = notifications.filter(
+    (n) => n.kind !== "NewMessage",
+  );
+
+  const hasUnread = visibleNotifications.some((n) => !n.read);
 
   const handleMarkAllRead = () => {
-    if (notifications.length === 0) return;
-    const maxId = notifications.reduce(
+    if (visibleNotifications.length === 0) return;
+    const maxId = visibleNotifications.reduce(
       (max, n) => (n.id > max ? n.id : max),
-      notifications[0].id,
+      visibleNotifications[0].id,
     );
     markRead(maxId, {
       onSuccess: () => toast.success("All notifications marked as read"),
@@ -44,7 +49,9 @@ export function NotificationsPanel({
     });
   };
 
-  const handleNotificationClick = (notification: (typeof notifications)[0]) => {
+  const handleNotificationClick = (
+    notification: (typeof visibleNotifications)[0],
+  ) => {
     toggleRead(notification.id);
     if (notification.conversationId != null && !notification.read) {
       onOpenChat(notification.conversationId);
@@ -90,7 +97,7 @@ export function NotificationsPanel({
             </div>
           )}
 
-          {!isLoading && !isError && notifications.length === 0 && (
+          {!isLoading && !isError && visibleNotifications.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 text-center px-4">
               <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
                 <Bell className="w-7 h-7 text-primary/50" />
@@ -104,9 +111,9 @@ export function NotificationsPanel({
             </div>
           )}
 
-          {!isLoading && !isError && notifications.length > 0 && (
+          {!isLoading && !isError && visibleNotifications.length > 0 && (
             <div className="p-2 space-y-0.5">
-              {notifications.map((notif) => (
+              {visibleNotifications.map((notif) => (
                 <NotificationItem
                   key={Number(notif.id)}
                   notification={notif}

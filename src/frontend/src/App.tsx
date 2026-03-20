@@ -18,6 +18,7 @@ import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import {
   useConversations,
+  useNotifications,
   useProfile,
   useTwoFactorStatus,
   useUnreadCount,
@@ -104,6 +105,7 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
   } = useProfile();
   const { data: conversations = [] } = useConversations();
   const { data: unreadCount = BigInt(0) } = useUnreadCount();
+  const { data: notifications = [] } = useNotifications();
 
   const [currentPage, setCurrentPage] = useState<Page>("chats");
   const [activeConversationId, setActiveConversationId] = useState<
@@ -126,6 +128,10 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
   }, [handleKeyDown]);
 
   const hasProfile = !isProfileError && profile?.name;
+
+  const bellUnreadCount = notifications.filter(
+    (n) => n.kind !== "NewMessage" && !n.read,
+  ).length;
 
   const handleOpenChat = (conversationId: bigint) => {
     setActiveConversationId(conversationId);
@@ -187,7 +193,8 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
           onLogout={onLogout}
           onSearch={() => setShowSearch(true)}
           onNotifications={() => setShowNotifications(true)}
-          unreadCount={Number(unreadCount)}
+          messageUnreadCount={Number(unreadCount)}
+          bellUnreadCount={bellUnreadCount}
         >
           {renderPage()}
         </AppShell>
