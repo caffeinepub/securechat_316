@@ -55,6 +55,7 @@ import {
   saveKeyPair,
 } from "../utils/keyStore";
 import { EditGroupDialog } from "./EditGroupDialog";
+import { GroupThreadsAccordion } from "./GroupThreadsAccordion";
 import { ManageMembersDialog } from "./ManageMembersDialog";
 import { UserAvatar } from "./UserAvatar";
 
@@ -63,6 +64,7 @@ interface GroupInfoPanelProps {
   onOpenChange: (open: boolean) => void;
   conversationId: bigint;
   onLeft: () => void;
+  onOpenThread?: (threadConversationId: bigint) => void;
 }
 
 export function GroupInfoPanel({
@@ -70,6 +72,7 @@ export function GroupInfoPanel({
   onOpenChange,
   conversationId,
   onLeft,
+  onOpenThread,
 }: GroupInfoPanelProps) {
   const { identity } = useInternetIdentity();
   const { actor } = useActor();
@@ -286,6 +289,16 @@ export function GroupInfoPanel({
                 </div>
 
                 <Separator />
+
+                {/* Threads */}
+                <GroupThreadsAccordion
+                  parentGroupId={conversationId}
+                  isAdmin={!!isAdmin}
+                  onOpenThread={(threadId) => {
+                    onOpenChange(false);
+                    onOpenThread?.(threadId);
+                  }}
+                />
 
                 {/* Leave group */}
                 <Button

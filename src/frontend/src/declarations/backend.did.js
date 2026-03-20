@@ -95,8 +95,8 @@ export const DisappearingTimer = IDL.Variant({
 });
 export const DiscoveryMode = IDL.Variant({
   'Open' : IDL.Null,
-  'IdOnly' : IDL.Null,
   'Hidden' : IDL.Null,
+  'IdOnly' : IDL.Null,
 });
 export const EncryptedEmailConfig = IDL.Record({
   'senderEmail' : IDL.Text,
@@ -442,8 +442,8 @@ export const idlFactory = ({ IDL }) => {
   });
   const DiscoveryMode = IDL.Variant({
     'Open' : IDL.Null,
-    'IdOnly' : IDL.Null,
     'Hidden' : IDL.Null,
+    'IdOnly' : IDL.Null,
   });
   const EncryptedEmailConfig = IDL.Record({
     'senderEmail' : IDL.Text,

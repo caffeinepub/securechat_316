@@ -32,6 +32,9 @@ export type DisappearingTimer = { 'Off' : null } |
   { 'Days30' : null } |
   { 'Days7' : null } |
   { 'Hours24' : null };
+export type DiscoveryMode = { 'Open' : null } |
+  { 'Hidden' : null } |
+  { 'IdOnly' : null };
 export interface EncryptedEmailConfig {
   'senderEmail' : string,
   'encryptedApiKey' : Uint8Array,
@@ -190,6 +193,7 @@ export interface _SERVICE {
   'getContacts' : ActorMethod<[], Array<[Contact, PublicProfile]>>,
   'getConversations' : ActorMethod<[], Array<ConversationPreview>>,
   'getDisappearingTimer' : ActorMethod<[bigint], DisappearingTimer>,
+  'getDiscoveryMode' : ActorMethod<[], DiscoveryMode>,
   'getEmailVerificationStatus' : ActorMethod<
     [],
     { 'verified' : boolean, 'email' : [] | [string] }
@@ -271,6 +275,7 @@ export interface _SERVICE {
   'toggleNotificationRead' : ActorMethod<[bigint], undefined>,
   'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
   'unblockUser' : ActorMethod<[Principal], undefined>,
+  'updateDiscoveryMode' : ActorMethod<[DiscoveryMode], undefined>,
   'updateGroup' : ActorMethod<
     [bigint, [] | [string], [] | [ExternalBlob]],
     undefined

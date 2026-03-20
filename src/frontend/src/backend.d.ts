@@ -34,6 +34,41 @@ export interface HttpRequestResult {
     body: Uint8Array;
     headers: Array<HttpHeader>;
 }
+export interface StatusUpdate {
+    id: bigint;
+    postedAt: bigint;
+    content: string;
+    expiresAt: bigint;
+    author: Principal;
+    mediaBlob?: ExternalBlob;
+    reactions: Array<[Principal, string]>;
+}
+export interface Profile {
+    bio: string;
+    twoFactorEnabled: boolean;
+    emailVerified: boolean;
+    name: string;
+    email?: string;
+    lastSeen: bigint;
+    avatar?: ExternalBlob;
+}
+export interface ConversationPreview {
+    id: bigint;
+    members: Array<PublicProfile>;
+    lastMessageTime?: bigint;
+    unreadCount: bigint;
+    groupInfo?: GroupInfo;
+    conversationType: ConversationType;
+}
+export interface ExportContact {
+    status: ContactStatus;
+    addedAt: bigint;
+    principalText: string;
+}
+export interface TransformationInput {
+    context: Uint8Array;
+    response: HttpRequestResult;
+}
 export interface FileMetadata {
     id: FileId;
     blob: ExternalBlob;
@@ -47,37 +82,9 @@ export interface Contact {
     principal: Principal;
     addedAt: bigint;
 }
-export interface StatusUpdate {
-    id: bigint;
-    postedAt: bigint;
-    content: string;
-    expiresAt: bigint;
-    author: Principal;
-    mediaBlob?: ExternalBlob;
-    reactions: Array<[Principal, string]>;
-}
-export type DiscoveryMode = { Open: null } | { IdOnly: null } | { Hidden: null };
-export interface Profile {
-    bio: string;
-    twoFactorEnabled: boolean;
-    emailVerified: boolean;
-    name: string;
-    email?: string;
-    lastSeen: bigint;
-    avatar?: ExternalBlob;
-    discoveryMode: DiscoveryMode;
-}
 export interface HttpHeader {
     value: string;
     name: string;
-}
-export interface ConversationPreview {
-    id: bigint;
-    members: Array<PublicProfile>;
-    lastMessageTime?: bigint;
-    unreadCount: bigint;
-    groupInfo?: GroupInfo;
-    conversationType: ConversationType;
 }
 export interface PublicProfile {
     bio: string;
@@ -85,11 +92,6 @@ export interface PublicProfile {
     name: string;
     lastSeen: bigint;
     avatar?: ExternalBlob;
-}
-export interface ExportContact {
-    status: ContactStatus;
-    addedAt: bigint;
-    principalText: string;
 }
 export interface GroupInfo {
     admin: Principal;
@@ -99,10 +101,6 @@ export interface GroupInfo {
 export interface WrappedGroupKey {
     encryptedKey: Uint8Array;
     wrappedBy: Principal;
-}
-export interface TransformationInput {
-    context: Uint8Array;
-    response: HttpRequestResult;
 }
 export interface Notification {
     id: bigint;
@@ -146,6 +144,11 @@ export enum DisappearingTimer {
     Days7 = "Days7",
     Hours24 = "Hours24"
 }
+export enum DiscoveryMode {
+    Open = "Open",
+    Hidden = "Hidden",
+    IdOnly = "IdOnly"
+}
 export enum MessageType {
     File = "File",
     Text = "Text",
@@ -168,6 +171,9 @@ export interface backendInterface {
     addReaction(conversationId: bigint, messageId: bigint, emoji: string): Promise<void>;
     blockUser(target: Principal): Promise<void>;
     clearGroupKeys(conversationId: bigint): Promise<void>;
+    createGroupThread(parentGroupId: bigint, name: string): Promise<bigint>;
+    getGroupThreads(parentGroupId: bigint): Promise<Array<{ id: bigint; name: string; createdAt: bigint }>>;
+    deleteGroupThread(parentGroupId: bigint, threadId: bigint): Promise<void>;
     createGroup(name: string, memberPrincipals: Array<Principal>, avatar: ExternalBlob | null): Promise<bigint>;
     deleteFile(id: FileId): Promise<void>;
     deleteMessage(conversationId: bigint, messageId: bigint): Promise<void>;
@@ -179,6 +185,7 @@ export interface backendInterface {
     getContacts(): Promise<Array<[Contact, PublicProfile]>>;
     getConversations(): Promise<Array<ConversationPreview>>;
     getDisappearingTimer(conversationId: bigint): Promise<DisappearingTimer>;
+    getDiscoveryMode(): Promise<DiscoveryMode>;
     getEmailVerificationStatus(): Promise<{
         verified: boolean;
         email?: string;
@@ -201,8 +208,6 @@ export interface backendInterface {
     getPublicKeys(principals: Array<Principal>): Promise<Array<[Principal, Uint8Array]>>;
     getPublicProfile(target: Principal): Promise<PublicProfile>;
     getShareId(): Promise<string>;
-    getDiscoveryMode(): Promise<DiscoveryMode>;
-    updateDiscoveryMode(mode: DiscoveryMode): Promise<void>;
     getTwoFactorStatus(): Promise<{
         emailVerified: boolean;
         email?: string;
@@ -241,6 +246,7 @@ export interface backendInterface {
     toggleNotificationRead(notificationId: bigint): Promise<void>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
     unblockUser(target: Principal): Promise<void>;
+    updateDiscoveryMode(mode: DiscoveryMode): Promise<void>;
     updateGroup(conversationId: bigint, name: string | null, avatar: ExternalBlob | null): Promise<void>;
     uploadFile(name: string, size: bigint, fileType: string, blob: ExternalBlob): Promise<FileMetadata>;
     verifyEmailOtp(code: string): Promise<void>;

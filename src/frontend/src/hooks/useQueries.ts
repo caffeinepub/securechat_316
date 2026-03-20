@@ -9,7 +9,12 @@ import type {
   PublicProfile,
   StatusUpdate,
 } from "@/backend";
-import { ContactStatus, ConversationType, ExternalBlob } from "@/backend";
+import {
+  ContactStatus,
+  ConversationType,
+  DiscoveryMode,
+  ExternalBlob,
+} from "@/backend";
 import { Principal } from "@dfinity/principal";
 import {
   useMutation,
@@ -20,7 +25,7 @@ import {
 import { useActor } from "./useActor";
 import { useInternetIdentity } from "./useInternetIdentity";
 
-export { ExternalBlob, ContactStatus, ConversationType };
+export { ExternalBlob, ContactStatus, ConversationType, DiscoveryMode };
 export type {
   FileMetadata,
   FileId,
@@ -32,11 +37,6 @@ export type {
   MessageType,
   StatusUpdate,
 };
-
-export type DiscoveryMode =
-  | { Open: null }
-  | { IdOnly: null }
-  | { Hidden: null };
 
 // Profile hooks
 
@@ -1238,6 +1238,79 @@ export function useClearGroupKeys() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myGroupKey"] });
+    },
+  });
+}
+
+// ─── Group Thread hooks ───────────────────────────────────────────────────────
+// Threads are stored on-chain via backend thread functions.
+export interface GroupThread {
+  id: string;
+  name: string;
+  createdAt: number;
+}
+
+export function useGroupThreads(parentGroupId: bigint | null) {
+  const { actor } = useActor();
+  return useQuery<GroupThread[]>({
+    queryKey: ["groupThreads", parentGroupId?.toString()],
+    queryFn: async () => {
+      if (parentGroupId === null || !actor) return [];
+      const threads = await actor.getGroupThreads(parentGroupId);
+      return threads.map((t) => ({
+        id: t.id.toString(),
+        name: t.name,
+        createdAt: Number(t.createdAt) / 1_000_000,
+      }));
+    },
+    enabled: parentGroupId !== null && !!actor,
+  });
+}
+
+export function useCreateGroupThread() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      parentGroupId,
+      name,
+    }: {
+      parentGroupId: bigint;
+      name: string;
+    }) => {
+      if (!actor) throw new Error("Actor not ready");
+      const threadId = await actor.createGroupThread(parentGroupId, name);
+      return threadId;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["groupThreads", variables.parentGroupId.toString()],
+      });
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+}
+
+export function useDeleteGroupThread() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      parentGroupId,
+      threadId,
+    }: {
+      parentGroupId: bigint;
+      threadId: string;
+    }) => {
+      if (!actor) throw new Error("Actor not ready");
+      await actor.deleteGroupThread(parentGroupId, BigInt(threadId));
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["groupThreads", variables.parentGroupId.toString()],
+      });
     },
   });
 }

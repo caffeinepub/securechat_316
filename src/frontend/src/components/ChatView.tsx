@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import {
+  ArrowDown,
   ArrowLeft,
   FileIcon,
   Image as ImageIcon,
@@ -18,6 +18,7 @@ import {
   Timer,
   X,
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useE2EE } from "../hooks/useE2EE";
@@ -45,6 +46,7 @@ import { UserAvatar } from "./UserAvatar";
 interface ChatViewProps {
   conversation: ConversationPreview;
   onBack: () => void;
+  onOpenConversation?: (conversationId: bigint) => void;
 }
 
 function formatRecordingTime(seconds: number): string {
@@ -53,7 +55,11 @@ function formatRecordingTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function ChatView({ conversation, onBack }: ChatViewProps) {
+export function ChatView({
+  conversation,
+  onBack,
+  onOpenConversation,
+}: ChatViewProps) {
   const { identity } = useInternetIdentity();
   const myPrincipal = identity?.getPrincipal().toString() ?? "";
 
@@ -85,10 +91,17 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Scroll / new-message notification state
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const isAtBottomRef = useRef(true);
+  const prevMessageCountRef = useRef(0);
+  const initialScrollDone = useRef(false);
+  const [showNewMsgPill, setShowNewMsgPill] = useState(false);
+
   // Free tier default: 30s. TODO: wire to subscription tier
   const MAX_RECORDING_SECONDS = 30;
 
-  const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,11 +118,64 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
     myPublicKeyRaw,
   } = useE2EE(conversation);
 
-  // Auto-scroll to bottom on new messages
+  // Helper: check if scroll container is near bottom
+  const checkIsAtBottom = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  }, []);
+
+  // Scroll to bottom using direct container manipulation (avoids mobile scrollIntoView issues)
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+    setShowNewMsgPill(false);
+    isAtBottomRef.current = true;
+  }, []);
+
+  // Track scroll position
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    const handleScroll = () => {
+      isAtBottomRef.current = checkIsAtBottom();
+      if (isAtBottomRef.current) setShowNewMsgPill(false);
+    };
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, [checkIsAtBottom]);
+
+  // Initial scroll to bottom (instant) once messages load
+  // Use rAF inside timeout to ensure DOM has painted
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (!isLoading && messages.length > 0 && !initialScrollDone.current) {
+      const tid = setTimeout(() => {
+        requestAnimationFrame(() => {
+          scrollToBottom("instant" as ScrollBehavior);
+          initialScrollDone.current = true;
+          prevMessageCountRef.current = messages.length;
+        });
+      }, 80);
+      return () => clearTimeout(tid);
+    }
+  }, [isLoading, messages.length, scrollToBottom]);
+
+  // On new messages after initial load
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
+  useEffect(() => {
+    if (!initialScrollDone.current) return;
+    if (messages.length <= prevMessageCountRef.current) {
+      prevMessageCountRef.current = messages.length;
+      return;
+    }
+    prevMessageCountRef.current = messages.length;
+
+    if (isAtBottomRef.current) {
+      scrollToBottom("smooth");
+    } else {
+      setShowNewMsgPill(true);
     }
   }, [messages.length]);
 
@@ -412,94 +478,120 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
           )}
         </div>
 
-        {/* Messages — flex-1 min-h-0 ensures it shrinks and the input stays pinned */}
-        <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
-          <div className="px-4 py-3 space-y-1">
-            {encryptionReady ? (
-              <div className="flex items-center justify-center gap-1.5 py-2 mb-2">
-                <Lock className="w-3 h-3 text-muted-foreground" />
-                <span className="text-[11px] text-muted-foreground">
-                  Messages are end-to-end encrypted
-                </span>
-              </div>
-            ) : (
-              !isInitializing && (
+        {/* Messages area — relative so new-message pill can be positioned inside */}
+        <div className="relative flex-1 min-h-0">
+          <div ref={scrollContainerRef} className="h-full overflow-y-auto">
+            <div className="px-4 py-3 space-y-1">
+              {encryptionReady ? (
                 <div className="flex items-center justify-center gap-1.5 py-2 mb-2">
-                  <LockOpen className="w-3 h-3 text-destructive" />
-                  <span className="text-[11px] text-destructive">
-                    Messages are not encrypted — waiting for key exchange
+                  <Lock className="w-3 h-3 text-muted-foreground" />
+                  <span className="text-[11px] text-muted-foreground">
+                    Messages are end-to-end encrypted
                   </span>
                 </div>
-              )
-            )}
+              ) : (
+                !isInitializing && (
+                  <div className="flex items-center justify-center gap-1.5 py-2 mb-2">
+                    <LockOpen className="w-3 h-3 text-destructive" />
+                    <span className="text-[11px] text-destructive">
+                      Messages are not encrypted — waiting for key exchange
+                    </span>
+                  </div>
+                )
+              )}
 
-            {(isLoading ||
-              (isInitializing &&
-                messages.some((m) => isEncryptedMessage(m.content)))) && (
-              <ChatSkeleton />
-            )}
+              {(isLoading ||
+                (isInitializing &&
+                  messages.some((m) => isEncryptedMessage(m.content)))) && (
+                <ChatSkeleton />
+              )}
 
-            {isError && (
-              <div className="text-destructive text-center py-12 text-sm">
-                Failed to load messages.
-              </div>
-            )}
-
-            {!isLoading &&
-              !isInitializing &&
-              !isError &&
-              messages.length === 0 && (
-                <div className="text-center py-12 text-muted-foreground text-sm">
-                  No messages yet. Say hello!
+              {isError && (
+                <div className="text-destructive text-center py-12 text-sm">
+                  Failed to load messages.
                 </div>
               )}
 
-            {!(
-              isLoading ||
-              (isInitializing &&
-                messages.some((m) => isEncryptedMessage(m.content)))
-            ) &&
-              messages.map((msg) => {
-                const displayContent =
-                  decryptedContents.get(msg.id) ?? msg.content;
-                const isSystem = isSystemMessage(displayContent, msg.content);
-                if (isSystem) {
+              {!isLoading &&
+                !isInitializing &&
+                !isError &&
+                messages.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground text-sm">
+                    No messages yet. Say hello!
+                  </div>
+                )}
+
+              {!(
+                isLoading ||
+                (isInitializing &&
+                  messages.some((m) => isEncryptedMessage(m.content)))
+              ) &&
+                messages.map((msg) => {
+                  const displayContent =
+                    decryptedContents.get(msg.id) ?? msg.content;
+                  const isSystem = isSystemMessage(displayContent, msg.content);
+                  if (isSystem) {
+                    return (
+                      <SystemMessage
+                        key={Number(msg.id)}
+                        text={displayContent}
+                      />
+                    );
+                  }
+                  const replyMsg =
+                    msg.replyToId != null
+                      ? messages.find((m) => m.id === msg.replyToId)
+                      : undefined;
                   return (
-                    <SystemMessage key={Number(msg.id)} text={displayContent} />
+                    <MessageBubble
+                      key={Number(msg.id)}
+                      message={msg}
+                      displayContent={displayContent}
+                      isMine={msg.sender.toString() === myPrincipal}
+                      showSender={!!isGroup}
+                      senderName={getSenderName(msg, conversation)}
+                      conversationId={conversation.id}
+                      onReply={() => handleReply(msg)}
+                      replyToSenderName={
+                        replyMsg
+                          ? replyMsg.sender.toString() === myPrincipal
+                            ? "You"
+                            : getSenderName(replyMsg, conversation)
+                          : undefined
+                      }
+                      replyToContent={
+                        replyMsg
+                          ? (decryptedContents.get(replyMsg.id) ??
+                            replyMsg.content)
+                          : undefined
+                      }
+                    />
                   );
-                }
-                const replyMsg =
-                  msg.replyToId != null
-                    ? messages.find((m) => m.id === msg.replyToId)
-                    : undefined;
-                return (
-                  <MessageBubble
-                    key={Number(msg.id)}
-                    message={msg}
-                    displayContent={displayContent}
-                    isMine={msg.sender.toString() === myPrincipal}
-                    showSender={!!isGroup}
-                    senderName={getSenderName(msg, conversation)}
-                    conversationId={conversation.id}
-                    onReply={() => handleReply(msg)}
-                    replyToSenderName={
-                      replyMsg
-                        ? replyMsg.sender.toString() === myPrincipal
-                          ? "You"
-                          : getSenderName(replyMsg, conversation)
-                        : undefined
-                    }
-                    replyToContent={
-                      replyMsg
-                        ? (decryptedContents.get(replyMsg.id) ??
-                          replyMsg.content)
-                        : undefined
-                    }
-                  />
-                );
-              })}
+                })}
+
+              {/* Scroll anchor (visual only) */}
+              <div ref={bottomRef} className="h-px" />
+            </div>
           </div>
-        </ScrollArea>
+
+          {/* New message floating pill */}
+          <AnimatePresence>
+            {showNewMsgPill && (
+              <motion.button
+                initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                transition={{ duration: 0.18 }}
+                onClick={() => scrollToBottom("smooth")}
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium shadow-lg cursor-pointer select-none z-10"
+                data-ocid="chat.new_message_pill"
+              >
+                New message
+                <ArrowDown className="w-3 h-3" />
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Reply preview */}
         {replyTo && (
@@ -630,7 +722,6 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
                 }}
                 placeholder="Type a message..."
                 className="flex-1"
-                autoFocus
               />
               {/* Mic button - only show when text is empty and no pending file */}
               {!text.trim() && !pendingFile && (
@@ -670,6 +761,7 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
           onOpenChange={setShowGroupInfo}
           conversationId={conversation.id}
           onLeft={onBack}
+          onOpenThread={onOpenConversation}
         />
       )}
 

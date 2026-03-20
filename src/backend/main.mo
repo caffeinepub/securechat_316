@@ -223,6 +223,7 @@ actor {
   // E2EE state
   var userPublicKeys : Map.Map<Principal, Blob> = Map.empty();
   var conversationGroupKeys : Map.Map<Nat, Map.Map<Principal, WrappedGroupKey>> = Map.empty();
+  var groupThreads : Map.Map<Nat, Map.Map<Nat, Bool>> = Map.empty();
 
   // vetKD encrypted email config
   var userEncryptedEmailConfigs : Map.Map<Principal, EncryptedEmailConfig> = Map.empty();
@@ -2172,5 +2173,92 @@ actor {
       case (null) { Runtime.trap("Conversation not found") };
     };
     conversationGroupKeys.remove(conversationId);
+  };
+
+  // Endpoints — Group Threads
+
+  public shared ({ caller }) func createGroupThread(parentGroupId : Nat, name : Text) : async Nat {
+    requireAuth(caller);
+    switch (conversations.get(parentGroupId)) {
+      case (?conv) {
+        switch (conv.groupInfo) {
+          case (?gi) {
+            if (gi.admin != caller) {
+              Runtime.trap("Only group admin can create threads");
+            };
+          };
+          case (null) { Runtime.trap("Not a group conversation") };
+        };
+      };
+      case (null) { Runtime.trap("Parent group not found") };
+    };
+    let parentMembers = getConversationMembers(parentGroupId);
+    let otherMembers = List.empty<Principal>();
+    for (p in parentMembers.keys()) {
+      if (p != caller) {
+        otherMembers.add(p);
+      };
+    };
+    let threadId = await createGroup(name, otherMembers.toArray(), null);
+    let threads = switch (groupThreads.get(parentGroupId)) {
+      case (?t) { t };
+      case (null) {
+        let t = Map.empty<Nat, Bool>();
+        groupThreads.add(parentGroupId, t);
+        t;
+      };
+    };
+    threads.add(threadId, true);
+    threadId;
+  };
+
+  public query ({ caller }) func getGroupThreads(parentGroupId : Nat) : async [{ id : Nat; name : Text; createdAt : Int }] {
+    requireAuth(caller);
+    if (not isConversationMember(parentGroupId, caller)) {
+      Runtime.trap("Not a member of this group");
+    };
+    switch (groupThreads.get(parentGroupId)) {
+      case (?threads) {
+        let result = List.empty<{ id : Nat; name : Text; createdAt : Int }>();
+        for (threadId in threads.keys()) {
+          switch (conversations.get(threadId)) {
+            case (?conv) {
+              switch (conv.groupInfo) {
+                case (?gi) {
+                  result.add({ id = threadId; name = gi.name; createdAt = conv.createdAt });
+                };
+                case (null) {};
+              };
+            };
+            case (null) {};
+          };
+        };
+        result.toArray();
+      };
+      case (null) { [] };
+    };
+  };
+
+  public shared ({ caller }) func deleteGroupThread(parentGroupId : Nat, threadId : Nat) : async () {
+    requireAuth(caller);
+    switch (conversations.get(parentGroupId)) {
+      case (?conv) {
+        switch (conv.groupInfo) {
+          case (?gi) {
+            if (gi.admin != caller) {
+              Runtime.trap("Only group admin can delete threads");
+            };
+          };
+          case (null) { Runtime.trap("Not a group conversation") };
+        };
+      };
+      case (null) { Runtime.trap("Parent group not found") };
+    };
+    switch (groupThreads.get(parentGroupId)) {
+      case (?threads) {
+        threads.remove(threadId);
+      };
+      case (null) {};
+    };
   };
 };

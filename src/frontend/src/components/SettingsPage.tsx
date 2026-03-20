@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { DiscoveryMode } from "@/hooks/useQueries";
+import { DiscoveryMode } from "@/hooks/useQueries";
 import {
   Ban,
   Eye,
@@ -45,15 +45,15 @@ import { UserAvatar } from "./UserAvatar";
 type DiscoveryKey = "Open" | "IdOnly" | "Hidden";
 
 function discoveryModeToKey(mode: DiscoveryMode): DiscoveryKey {
-  if ("Open" in mode) return "Open";
-  if ("IdOnly" in mode) return "IdOnly";
+  if (mode === DiscoveryMode.Open) return "Open";
+  if (mode === DiscoveryMode.IdOnly) return "IdOnly";
   return "Hidden";
 }
 
 function keyToDiscoveryMode(key: DiscoveryKey): DiscoveryMode {
-  if (key === "Open") return { Open: null };
-  if (key === "IdOnly") return { IdOnly: null };
-  return { Hidden: null };
+  if (key === "Open") return DiscoveryMode.Open;
+  if (key === "IdOnly") return DiscoveryMode.IdOnly;
+  return DiscoveryMode.Hidden;
 }
 
 const DISCOVERY_OPTIONS: {
