@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import type { Principal } from "@dfinity/principal";
 import {
   AtSign,
   Heart,
@@ -7,6 +8,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
+import { usePublicProfile } from "../hooks/useQueries";
 import { formatRelativeTime } from "../utils/formatting";
 
 interface NotificationItemProps {
@@ -16,7 +18,7 @@ interface NotificationItemProps {
     timestamp: bigint;
     read: boolean;
     conversationId?: bigint;
-    fromPrincipal?: unknown;
+    fromPrincipal?: Principal;
   };
   onClick: () => void;
 }
@@ -64,6 +66,12 @@ export function NotificationItem({
   const config = NOTIF_CONFIG[notification.kind] ?? NOTIF_CONFIG.NewMessage;
   const Icon = config.icon;
 
+  const principalStr = notification.fromPrincipal
+    ? notification.fromPrincipal.toString()
+    : null;
+  const { data: profile } = usePublicProfile(principalStr);
+  const displayName = profile?.name ?? "Someone";
+
   return (
     <button
       type="button"
@@ -88,7 +96,7 @@ export function NotificationItem({
             !notification.read && "font-medium",
           )}
         >
-          {config.label}
+          {displayName} {config.label}
         </p>
         <p className="text-[11px] text-muted-foreground">
           {formatRelativeTime(notification.timestamp)}
