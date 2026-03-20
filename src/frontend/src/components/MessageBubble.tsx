@@ -18,6 +18,7 @@ import { formatFileSize, formatMessageTime } from "../utils/formatting";
 import { FileMessage } from "./FileMessage";
 import { ImageMessage } from "./ImageMessage";
 import { MessageActions } from "./MessageActions";
+import { VoiceMessage } from "./VoiceMessage";
 
 interface MessageBubbleProps {
   message: Message;
@@ -39,8 +40,12 @@ function isVideoType(msg: Message): boolean {
   return msg.messageType === "Video";
 }
 
+function isAudioType(msg: Message): boolean {
+  return msg.messageType === "Audio";
+}
+
 function isFileType(msg: Message): boolean {
-  return msg.messageType === "File" || msg.messageType === "Audio";
+  return msg.messageType === "File";
 }
 
 export function MessageBubble({
@@ -59,6 +64,7 @@ export function MessageBubble({
     message.mediaBlob !== null && message.mediaBlob !== undefined;
   const isImage = isImageType(message) || isVideoType(message);
   const isFile = isFileType(message);
+  const isAudio = isAudioType(message);
   const content = displayContent ?? message.content;
   const encrypted = isEncryptedMessage(message.content);
   const decryptFailed = encrypted && content === "[Unable to decrypt]";
@@ -150,6 +156,8 @@ export function MessageBubble({
               isMine={isMine}
               onClick={() => setShowDownloadDialog(true)}
             />
+          ) : hasMedia && isAudio ? (
+            <VoiceMessage message={message} isMine={isMine} />
           ) : hasMedia && isFile ? (
             <FileMessage
               message={message}
@@ -234,7 +242,7 @@ export function MessageBubble({
         )}
       </div>
 
-      {hasMedia && (
+      {hasMedia && !isAudio && (
         <AlertDialog
           open={showDownloadDialog}
           onOpenChange={setShowDownloadDialog}

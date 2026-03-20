@@ -142,12 +142,8 @@ export function useE2EE(
       );
       conversationKeyRef.current = groupKey;
 
-      // If admin, re-distribute group key to members who may have been
-      // missed during initial creation (their public key wasn't published yet)
-      const adminPrincipal = conv.groupInfo?.admin?.toString();
-      if (adminPrincipal === myPrincipal) {
-        distributeToMissingMembers(conv, myKeyPair, groupKey).catch(() => {});
-      }
+      // Any member who has the group key distributes it to members who are missing it
+      distributeToMissingMembers(conv, myKeyPair, groupKey).catch(() => {});
 
       return true;
     };
@@ -201,14 +197,9 @@ export function useE2EE(
         if (ready) {
           setEncryptionReady(true);
 
-          // If admin of a group, periodically distribute group key to members
+          // Any group member periodically distributes the group key to members
           // whose public keys weren't available during initial distribution
-          const adminPrincipal = conversation.groupInfo?.admin?.toString();
-          if (
-            isGroup &&
-            adminPrincipal === myPrincipal &&
-            conversationKeyRef.current
-          ) {
+          if (isGroup && conversationKeyRef.current) {
             const groupKey = conversationKeyRef.current;
             distributeInterval = setInterval(() => {
               if (!cancelled) {

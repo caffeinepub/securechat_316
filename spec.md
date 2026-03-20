@@ -1,27 +1,39 @@
-# SecureChat
+# SecureChat - Voice Notes
 
 ## Current State
-The app has both `:root` (light) and `.dark` (dark) CSS variable sets fully defined in `index.css`. There is no theme switching mechanism -- the app always renders in light mode. SettingsPage has Privacy & Security, Email Service, Data, and About sections plus a logout button.
+- Chat supports Text, Image, File, Video message types
+- Backend already has `#Audio` in the `MessageType` variant and `mediaBlob`/`mediaName`/`mediaSize` fields on Message
+- `backend.d.ts` already has `Audio = "Audio"` in the MessageType enum
+- Audio messages currently route to `FileMessage` component (download-only) via `isFileType` check
+- ChatView accepts `audio/*` files via file input already
+- ExternalBlob pattern (fromBytes + getDirectURL) is used for all media uploads
+- Three-tier subscription: Free, Plus ($3/mo), Pro ($12/mo)
 
 ## Requested Changes (Diff)
 
 ### Add
-- `ThemeProvider` context (`src/frontend/src/hooks/useTheme.tsx`) that:
-  - Manages theme state: `"light"`, `"dark"`, or `"system"`
-  - On mount, reads saved preference from `localStorage` (key: `"theme"`); defaults to `"system"` if none saved
-  - When `"system"`, applies `dark` class based on `window.matchMedia("(prefers-color-scheme: dark)")` and listens for changes
-  - Applies/removes `dark` class on `<html>` element reactively
-  - Saves preference to `localStorage` on change
-- `ThemeToggle` component (inline in SettingsPage or separate) -- a 3-option toggle (Light / System / Dark) placed in a new "Appearance" section in SettingsPage, above Privacy & Security
+- `VoiceMessage.tsx` component: inline audio player with `<audio controls>`, showing duration and a waveform-style progress bar
+- Microphone record button in `ChatView.tsx` message input area (alongside the existing attachment/send buttons)
+- Recording UI state: idle → recording (with live timer) → review (play before send) → sending
+- Client-side duration enforcement per tier: Free = 30s, Plus = 120s, Pro = 300s (auto-stops recording at limit)
+- Uses browser `MediaRecorder` API with `audio/webm;codecs=opus` format
+- On stop/send: creates `ExternalBlob.fromBytes(uint8Array)` with `messageType = { Audio: null }`, sends via existing `sendMessage` mutation
 
 ### Modify
-- `App.tsx`: wrap the app in `ThemeProvider`
-- `SettingsPage.tsx`: add Appearance section with the theme toggle
+- `MessageBubble.tsx`: route `messageType === "Audio"` to new `VoiceMessage` component instead of `FileMessage`
+- `ChatView.tsx`: add mic button, recording state management, tier-based duration cap
 
 ### Remove
-- Nothing
+- Nothing removed
 
 ## Implementation Plan
-1. Create `src/frontend/src/hooks/useTheme.tsx` with `ThemeProvider` and `useTheme` hook
-2. Wrap app root in `ThemeProvider` in `App.tsx`
-3. Add Appearance section to `SettingsPage.tsx` with a 3-way toggle (Light / System / Dark) using `ToggleGroup`
+1. Create `VoiceMessage.tsx` - inline audio player using `<audio>` element, show filename/duration, styled to match existing message bubbles
+2. Update `MessageBubble.tsx` - separate Audio from File in type detection, render VoiceMessage for Audio type
+3. Update `ChatView.tsx`:
+   - Add mic icon button next to send button
+   - Manage recording state (idle/recording/reviewing)
+   - Use MediaRecorder API to capture audio
+   - Show live elapsed timer during recording
+   - Auto-stop at tier limit (30s/120s/300s) - use Free tier (30s) as default since subscription system not yet fully wired
+   - On send: convert blob to Uint8Array, wrap in ExternalBlob, call sendMessage with Audio type
+   - Show upload progress same as existing media

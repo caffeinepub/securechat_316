@@ -10,9 +10,11 @@ import {
   Loader2,
   Lock,
   LockOpen,
+  Mic,
   Paperclip,
   Send,
   Shield,
+  Square,
   Timer,
   X,
 } from "lucide-react";
@@ -45,6 +47,12 @@ interface ChatViewProps {
   onBack: () => void;
 }
 
+function formatRecordingTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 export function ChatView({ conversation, onBack }: ChatViewProps) {
   const { identity } = useInternetIdentity();
   const myPrincipal = identity?.getPrincipal().toString() ?? "";
@@ -69,6 +77,17 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
   const [decryptedContents, setDecryptedContents] = useState<
     Map<bigint, string>
   >(new Map());
+
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Free tier default: 30s. TODO: wire to subscription tier
+  const MAX_RECORDING_SECONDS = 30;
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -112,6 +131,122 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
     if (messages.length === 0) return;
     decryptMessages(messages).then(setDecryptedContents);
   }, [messages, decryptMessages, encryptionReady]);
+
+  // Cleanup recording on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (
+        mediaRecorderRef.current &&
+        mediaRecorderRef.current.state !== "inactive"
+      ) {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, []);
+
+  const sendAudioBlob = useCallback(
+    async (audioBlob: Blob) => {
+      try {
+        setUploadProgress(0);
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        let mediaBlob = ExternalBlob.fromBytes(uint8Array);
+        mediaBlob = mediaBlob.withUploadProgress((pct: number) =>
+          setUploadProgress(pct),
+        );
+        const msgType = { Audio: null } as unknown as MessageType;
+
+        sendMessage(
+          {
+            conversationId: conversation.id,
+            content: "",
+            messageType: msgType,
+            mediaBlob,
+            mediaName: `voice-note-${Date.now()}.webm`,
+            mediaSize: BigInt(uint8Array.length),
+            replyToId: replyTo ? replyTo.id : null,
+            mentionedPrincipals: null,
+          },
+          {
+            onSuccess: () => {
+              setReplyTo(null);
+              setUploadProgress(null);
+            },
+            onError: () => {
+              toast.error("Failed to send voice note");
+              setUploadProgress(null);
+            },
+          },
+        );
+      } catch {
+        toast.error("Failed to prepare voice note");
+        setUploadProgress(null);
+      }
+    },
+    [conversation.id, replyTo, sendMessage],
+  );
+
+  const stopRecording = useCallback(() => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingSeconds(0);
+
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+    }
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      audioChunksRef.current = [];
+
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        // Stop all stream tracks
+        for (const track of stream.getTracks()) track.stop();
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        if (audioBlob.size > 0) {
+          sendAudioBlob(audioBlob);
+        }
+        audioChunksRef.current = [];
+      };
+
+      recorder.start(250); // collect in 250ms chunks
+      setIsRecording(true);
+      setRecordingSeconds(0);
+
+      let elapsed = 0;
+      recordingTimerRef.current = setInterval(() => {
+        elapsed += 1;
+        setRecordingSeconds(elapsed);
+        if (elapsed >= MAX_RECORDING_SECONDS) {
+          stopRecording();
+        }
+      }, 1000);
+    } catch {
+      toast.error(
+        "Microphone access denied. Please allow microphone permissions.",
+      );
+    }
+  }, [sendAudioBlob, stopRecording]);
 
   const getMessageType = useCallback((file: File | null) => {
     if (!file) return { Text: null };
@@ -444,43 +579,86 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
             onChange={handleFileSelect}
             accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar"
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isSending || uploadProgress !== null}
-          >
-            <Paperclip className="w-4 h-4" />
-          </Button>
-          <Input
-            ref={inputRef}
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              const now = Date.now();
-              if (now - lastTypingSent.current > 3000) {
-                lastTypingSent.current = now;
-                setTyping(conversation.id);
-              }
-            }}
-            placeholder="Type a message..."
-            className="flex-1"
-            autoFocus
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={(!text.trim() && !pendingFile) || isSending}
-            className="h-9 w-9 shrink-0"
-          >
-            {isSending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </Button>
+
+          {isRecording ? (
+            /* Recording state */
+            <>
+              <div className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-lg bg-destructive/10 border border-destructive/20">
+                <span className="inline-flex h-2 w-2 rounded-full bg-destructive animate-pulse shrink-0" />
+                <span className="text-sm font-medium text-destructive tabular-nums">
+                  {formatRecordingTime(recordingSeconds)}
+                </span>
+                <span className="text-xs text-muted-foreground ml-1">
+                  / {formatRecordingTime(MAX_RECORDING_SECONDS)}
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={stopRecording}
+                data-ocid="voice.toggle"
+              >
+                <Square className="w-4 h-4" fill="currentColor" />
+              </Button>
+            </>
+          ) : (
+            /* Normal state */
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSending || uploadProgress !== null}
+              >
+                <Paperclip className="w-4 h-4" />
+              </Button>
+              <Input
+                ref={inputRef}
+                value={text}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  const now = Date.now();
+                  if (now - lastTypingSent.current > 3000) {
+                    lastTypingSent.current = now;
+                    setTyping(conversation.id);
+                  }
+                }}
+                placeholder="Type a message..."
+                className="flex-1"
+                autoFocus
+              />
+              {/* Mic button - only show when text is empty and no pending file */}
+              {!text.trim() && !pendingFile && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={startRecording}
+                  disabled={isSending || uploadProgress !== null}
+                  data-ocid="voice.toggle"
+                >
+                  <Mic className="w-4 h-4" />
+                </Button>
+              )}
+              <Button
+                type="submit"
+                size="icon"
+                disabled={(!text.trim() && !pendingFile) || isSending}
+                className="h-9 w-9 shrink-0"
+              >
+                {isSending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+              </Button>
+            </>
+          )}
         </form>
       </div>
 
