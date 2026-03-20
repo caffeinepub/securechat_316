@@ -632,6 +632,21 @@ export function useLeaveGroup() {
   });
 }
 
+export function useDeleteGroup() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (conversationId: bigint) => {
+      if (!actor) throw new Error("Actor not ready");
+      await actor.deleteGroup(conversationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+}
+
 // Status hooks
 
 export function useContactStatuses() {

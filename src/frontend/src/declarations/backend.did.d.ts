@@ -235,6 +235,7 @@ export interface _SERVICE {
     { 'contactsRequested' : bigint }
   >,
   'leaveGroup' : ActorMethod<[bigint], undefined>,
+  'deleteGroup' : ActorMethod<[bigint], undefined>,
   'markAsRead' : ActorMethod<[bigint, bigint], undefined>,
   'markNotificationsRead' : ActorMethod<[bigint], undefined>,
   'postStatus' : ActorMethod<[string, [] | [ExternalBlob]], bigint>,

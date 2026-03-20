@@ -22,6 +22,7 @@ import {
   LogOut,
   Settings,
   Shield,
+  Trash2,
   UserMinus,
   UserPlus,
   Users,
@@ -32,6 +33,7 @@ import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useClearGroupKeys,
+  useDeleteGroup,
   useGetPublicKeys,
   useGroupInfo,
   useLeaveGroup,
@@ -79,6 +81,7 @@ export function GroupInfoPanel({
   const myPrincipal = identity?.getPrincipal().toString() ?? "";
   const { data: groupInfo, isLoading, isError } = useGroupInfo(conversationId);
   const { mutate: leaveGroup, isPending: isLeaving } = useLeaveGroup();
+  const { mutate: deleteGroup, isPending: isDeleting } = useDeleteGroup();
   const { mutate: removeMember, isPending: isRemoving } =
     useRemoveGroupMember();
   const { mutateAsync: clearGroupKeys } = useClearGroupKeys();
@@ -88,6 +91,7 @@ export function GroupInfoPanel({
   const [showEdit, setShowEdit] = useState(false);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const isAdmin = groupInfo && groupInfo.admin.toString() === myPrincipal;
 
@@ -309,6 +313,21 @@ export function GroupInfoPanel({
                   <LogOut className="w-4 h-4" />
                   Leave Group
                 </Button>
+
+                {/* Delete group - admin only */}
+                {isAdmin && (
+                  <>
+                    <Separator className="my-2" />
+                    <Button
+                      variant="ghost"
+                      className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 gap-2 font-medium"
+                      onClick={() => setShowDeleteConfirm(true)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete Group
+                    </Button>
+                  </>
+                )}
               </div>
             </ScrollArea>
           )}
@@ -349,6 +368,42 @@ export function GroupInfoPanel({
             <AlertDialogAction onClick={handleLeave} disabled={isLeaving}>
               {isLeaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isLeaving ? "Leaving..." : "Leave"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete group confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete group permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the group, all messages, and all
+              threads. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              onClick={() => {
+                deleteGroup(conversationId, {
+                  onSuccess: () => {
+                    toast.success("Group deleted");
+                    setShowDeleteConfirm(false);
+                    onOpenChange(false);
+                    onLeft();
+                  },
+                  onError: () => {
+                    toast.error("Failed to delete group");
+                  },
+                });
+              }}
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isDeleting ? "Deleting..." : "Delete Group"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

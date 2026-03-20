@@ -1,20 +1,24 @@
 # SecureChat
 
 ## Current State
-GroupThreadsAccordion uses shadcn Accordion component which appears to not render in production (dark mode / mobile). The threads section is invisible to users despite being in the code.
+Groups can be created and managed by admins. The Group Info panel includes Edit, Add Members, Members list, and Leave Group. There is no way to delete a group entirely. The backend has `leaveGroup` and cleanup logic but no `deleteGroup` function.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Nothing new
+- `deleteGroup` backend function: admin-only, wipes all group data (conversation, messages, members, threads, group keys, removes from all members' conversation lists)
+- `useDeleteGroup` frontend mutation hook
+- Delete Group button in GroupInfoPanel, below Leave Group section with a visual separator
+- Confirmation AlertDialog before deletion with strong warning copy
 
 ### Modify
-- Replace `GroupThreadsAccordion` accordion-based UI with a plain always-visible threads section (no collapsible). Keep same functionality: list threads, admin can create/delete, clicking a thread opens it.
+- `GroupInfoPanel.tsx`: add delete button (admin-only), confirmation dialog, and handler
+- `useQueries.ts`: add `useDeleteGroup` mutation
 
 ### Remove
-- Accordion component dependency from GroupThreadsAccordion
+- Nothing
 
 ## Implementation Plan
-- Rewrite `GroupThreadsAccordion.tsx` to use a simple div-based layout instead of shadcn Accordion
-- Always show threads list expanded
-- Keep all existing logic (useGroupThreads, useCreateGroupThread, useDeleteGroupThread, isAdmin controls, onOpenThread callback)
+1. Add `deleteGroup` public shared function to `main.mo` -- checks caller is admin, removes: conversationMessages, conversationMembers (all members), userConversations entry for each member, groupThreads, group keys, and the conversation itself
+2. Add `useDeleteGroup` mutation to `useQueries.ts` calling `actor.deleteGroup(conversationId)`
+3. In `GroupInfoPanel.tsx`: import hook, add `showDeleteConfirm` state, add Delete Group button below Leave Group with a `<Separator />` and red destructive styling, add AlertDialog with strong warning message, on confirm call deleteGroup and close panel

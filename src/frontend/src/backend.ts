@@ -313,6 +313,7 @@ export interface backendInterface {
         contactsRequested: bigint;
     }>;
     leaveGroup(conversationId: bigint): Promise<void>;
+    deleteGroup(conversationId: bigint): Promise<void>;
     markAsRead(conversationId: bigint, upToMessageId: bigint): Promise<void>;
     markNotificationsRead(upToId: bigint): Promise<void>;
     postStatus(content: string, mediaBlob: ExternalBlob | null): Promise<bigint>;
@@ -1030,6 +1031,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.leaveGroup(arg0);
+            return result;
+        }
+    }
+    async deleteGroup(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteGroup(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteGroup(arg0);
             return result;
         }
     }

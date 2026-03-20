@@ -1473,6 +1473,49 @@ actor {
     };
   };
 
+  public shared ({ caller }) func deleteGroup(conversationId : Nat) : async () {
+    requireAuth(caller);
+    switch (conversations.get(conversationId)) {
+      case (?conv) {
+        switch (conv.groupInfo) {
+          case (?gi) {
+            if (gi.admin != caller) {
+              Runtime.trap("Only group admin can delete the group");
+            };
+            // Remove conversation from all members user lists
+            let members = getConversationMembers(conversationId);
+            for ((p, _) in members.entries()) {
+              getUserConversations(p).remove(conversationId);
+            };
+            // Remove all group data
+            conversationMembers.remove(conversationId);
+            conversationMessages.remove(conversationId);
+            conversationGroupKeys.remove(conversationId);
+            // Remove threads and their data
+            switch (groupThreads.get(conversationId)) {
+              case (?threads) {
+                for ((threadId, _) in threads.entries()) {
+                  conversationMembers.remove(threadId);
+                  conversationMessages.remove(threadId);
+                  conversationGroupKeys.remove(threadId);
+                  conversations.remove(threadId);
+                  for ((p, _) in members.entries()) {
+                    getUserConversations(p).remove(threadId);
+                  };
+                };
+              };
+              case (null) {};
+            };
+            groupThreads.remove(conversationId);
+            conversations.remove(conversationId);
+          };
+          case (null) { Runtime.trap("Not a group conversation") };
+        };
+      };
+      case (null) { Runtime.trap("Conversation not found") };
+    };
+  };
+
   public query ({ caller }) func getGroupInfo(conversationId : Nat) : async {
     name : Text;
     avatar : ?Storage.ExternalBlob;
