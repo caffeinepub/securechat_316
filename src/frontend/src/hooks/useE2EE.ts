@@ -94,7 +94,11 @@ export function useE2EE(
     ): Promise<boolean> => {
       if (!conv.members || conv.members.length === 0) return false;
 
-      const peerPrincipal = conv.members[0].principal.toString();
+      const peerMember = conv.members.find(
+        (m) => m.principal.toString() !== myPrincipal,
+      );
+      if (!peerMember) return false;
+      const peerPrincipal = peerMember.principal.toString();
       const peerKeyBlob = await actor.getPublicKey(
         Principal.fromText(peerPrincipal),
       );
