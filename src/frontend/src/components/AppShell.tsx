@@ -34,6 +34,7 @@ interface AppShellProps {
   onNotifications?: () => void;
   messageUnreadCount?: number;
   bellUnreadCount?: number;
+  hideBottomNav?: boolean;
 }
 
 const NAV_ITEMS: { page: Page; icon: typeof MessageSquare; label: string }[] = [
@@ -54,21 +55,26 @@ export function AppShell({
   onNotifications,
   messageUnreadCount = 0,
   bellUnreadCount = 0,
+  hideBottomNav = false,
 }: AppShellProps) {
   const isMobile = useIsMobile();
 
   if (isMobile) {
     return (
       <div className="flex flex-col h-dvh bg-background">
-        <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
-        <MobileNav
-          currentPage={currentPage}
-          onNavigate={onNavigate}
-          onSearch={onSearch}
-          onNotifications={onNotifications}
-          messageUnreadCount={messageUnreadCount}
-          bellUnreadCount={bellUnreadCount}
-        />
+        {/* flex flex-col ensures ChatView (h-full) can fill this container */}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+          {children}
+        </div>
+        {!hideBottomNav && (
+          <MobileNav
+            currentPage={currentPage}
+            onNavigate={onNavigate}
+            onNotifications={onNotifications}
+            messageUnreadCount={messageUnreadCount}
+            bellUnreadCount={bellUnreadCount}
+          />
+        )}
       </div>
     );
   }
@@ -242,14 +248,12 @@ function DesktopSidebar({
 function MobileNav({
   currentPage,
   onNavigate,
-  onSearch,
   onNotifications,
   messageUnreadCount = 0,
   bellUnreadCount = 0,
 }: {
   currentPage: Page;
   onNavigate: (page: Page) => void;
-  onSearch?: () => void;
   onNotifications?: () => void;
   messageUnreadCount?: number;
   bellUnreadCount?: number;
@@ -300,16 +304,6 @@ function MobileNav({
 
   return (
     <nav className="shrink-0 border-t border-border/60 bg-background pb-[env(safe-area-inset-bottom)]">
-      {onSearch && (
-        <button
-          type="button"
-          onClick={onSearch}
-          className="flex items-center gap-2 w-[calc(100%-24px)] mx-3 mt-2 px-3 py-1.5 rounded-lg bg-muted/50 text-muted-foreground transition-colors active:bg-muted"
-        >
-          <Search className="w-3.5 h-3.5 shrink-0" />
-          <span className="text-xs">Search conversations...</span>
-        </button>
-      )}
       <div className="flex items-center justify-around h-14">
         {mobileItems.map(({ key, icon: Icon, label, action, isPage }) => {
           const isActive = isPage && currentPage === key;

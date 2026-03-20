@@ -200,6 +200,7 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
           onNotifications={() => setShowNotifications(true)}
           messageUnreadCount={messageUnreadCount}
           bellUnreadCount={bellUnreadCount}
+          hideBottomNav={!!activeConversation}
         >
           {renderPage()}
         </AppShell>

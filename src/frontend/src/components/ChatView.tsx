@@ -346,6 +346,7 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
 
   return (
     <>
+      {/* Use h-full so the parent AppShell container controls height */}
       <div className="flex flex-col h-full">
         {/* Chat header */}
         <div className="shrink-0 px-3 py-2.5 border-b flex items-center gap-3 bg-background">
@@ -411,8 +412,8 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
           )}
         </div>
 
-        {/* Messages */}
-        <ScrollArea className="flex-1" ref={scrollRef}>
+        {/* Messages — flex-1 min-h-0 ensures it shrinks and the input stays pinned */}
+        <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
           <div className="px-4 py-3 space-y-1">
             {encryptionReady ? (
               <div className="flex items-center justify-center gap-1.5 py-2 mb-2">
@@ -567,10 +568,10 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
         {/* Typing indicator */}
         <TypingIndicator conversation={conversation} />
 
-        {/* Input bar */}
+        {/* Input bar — shrink-0 keeps it pinned; pb clears iOS home indicator */}
         <form
           onSubmit={handleSend}
-          className="shrink-0 px-3 py-2.5 border-t bg-background flex items-center gap-2"
+          className="shrink-0 px-3 py-2.5 border-t bg-background flex items-center gap-2 pb-[max(0.625rem,env(safe-area-inset-bottom))]"
         >
           <input
             ref={fileInputRef}
