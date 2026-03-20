@@ -21,7 +21,6 @@ import {
   useNotifications,
   useProfile,
   useTwoFactorStatus,
-  useUnreadCount,
 } from "./hooks/useQueries";
 import { ThemeProvider } from "./hooks/useTheme";
 
@@ -104,7 +103,6 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
     isError: isProfileError,
   } = useProfile();
   const { data: conversations = [] } = useConversations();
-  const { data: unreadCount = BigInt(0) } = useUnreadCount();
   const { data: notifications = [] } = useNotifications();
 
   const [currentPage, setCurrentPage] = useState<Page>("chats");
@@ -132,6 +130,13 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
   const bellUnreadCount = notifications.filter(
     (n) => n.kind !== "NewMessage" && !n.read,
   ).length;
+
+  // Sum per-conversation unread counts — these are cursor-based and
+  // correctly cleared when the user opens and reads a conversation.
+  const messageUnreadCount = conversations.reduce(
+    (sum, c) => sum + Number(c.unreadCount),
+    0,
+  );
 
   const handleOpenChat = (conversationId: bigint) => {
     setActiveConversationId(conversationId);
@@ -193,7 +198,7 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
           onLogout={onLogout}
           onSearch={() => setShowSearch(true)}
           onNotifications={() => setShowNotifications(true)}
-          messageUnreadCount={Number(unreadCount)}
+          messageUnreadCount={messageUnreadCount}
           bellUnreadCount={bellUnreadCount}
         >
           {renderPage()}
