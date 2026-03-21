@@ -79,7 +79,7 @@ export function NewGroupDialog({
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed || selected.size === 0) return;
+    if (!trimmed) return;
 
     createGroup(
       {
@@ -197,7 +197,10 @@ export function NewGroupDialog({
               {!isLoading && accepted.length === 0 && (
                 <div className="text-center py-6 text-sm text-muted-foreground">
                   <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  <p>No contacts to add. Add contacts first.</p>
+                  <p>
+                    No contacts yet -- you can add members after creating the
+                    group.
+                  </p>
                 </div>
               )}
 
@@ -239,10 +242,7 @@ export function NewGroupDialog({
           </div>
 
           <DialogFooter>
-            <Button
-              type="submit"
-              disabled={isPending || !name.trim() || selected.size === 0}
-            >
+            <Button type="submit" disabled={isPending || !name.trim()}>
               {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isPending ? "Creating..." : "Create Group"}
             </Button>

@@ -35,6 +35,8 @@ actor {
     #Video;
   };
 
+  // Original Message type — UNCHANGED for stable variable compatibility.
+  // DTN envelope metadata is stored separately in `dtnMetadata`.
   type Message = {
     id : Nat;
     conversationId : Nat;
@@ -48,6 +50,20 @@ actor {
     timestamp : Int;
     deleted : Bool;
     reactions : [(Principal, Text)];
+  };
+
+  // DTN envelope metadata stored alongside messages (keyed by messageUuid).
+  // Stored separately to avoid breaking stable variable compatibility.
+  type DtnMeta = {
+    messageUuid : Text;
+    messageId : Nat;       // the canister-assigned Message.id this belongs to
+    conversationId : Nat;
+    senderDeviceId : ?Text;
+    recipientHint : ?Text;
+    ttl : ?Int;
+    hopCount : Nat;
+    contentHash : ?Text;
+    protocolVersion : Nat;
   };
 
   type ConversationType = {
@@ -225,6 +241,13 @@ actor {
   var conversationGroupKeys : Map.Map<Nat, Map.Map<Principal, WrappedGroupKey>> = Map.empty();
   // Retained for upgrade compatibility (threads feature removed)
   var groupThreads : Map.Map<Nat, Map.Map<Nat, Bool>> = Map.empty();
+
+  // DTN deduplication: tracks seen messageUuids to prevent duplicate storage
+  var seenUuids : Map.Map<Text, Bool> = Map.empty();
+
+  // DTN envelope metadata: stored separately from Message to avoid stable variable incompatibility
+  var dtnMetadata : Map.Map<Text, DtnMeta> = Map.empty();  // keyed by messageUuid
+  var messageIdToUuid : Map.Map<Nat, Text> = Map.empty();  // reverse lookup: Message.id -> messageUuid
 
   // vetKD encrypted email config
   var userEncryptedEmailConfigs : Map.Map<Principal, EncryptedEmailConfig> = Map.empty();
@@ -1152,6 +1175,161 @@ actor {
       };
     };
     result.toArray();
+  };
+
+  // DTN: cursor-based incremental sync — replaces full-refetch polling
+  public query ({ caller }) func getMessagesSince(conversationId : Nat, fromMessageId : Nat, limit : Nat) : async [Message] {
+    requireAuth(caller);
+    if (not isConversationMember(conversationId, caller)) {
+      Runtime.trap("Not a member of this conversation");
+    };
+    let messages = getConversationMessages(conversationId);
+    let effectiveLimit = if (limit == 0 or limit > 100) { 50 } else { limit };
+    let now = Time.now();
+    let timerDuration = switch (conversationTimers.get(conversationId)) {
+      case (?t) { timerToNanos(t) };
+      case (null) { null };
+    };
+    let result = List.empty<Message>();
+    for (msg in messages.values()) {
+      if (not msg.deleted and msg.id > fromMessageId) {
+        let expired = switch (timerDuration) {
+          case (?dur) { msg.timestamp + dur < now };
+          case (null) { false };
+        };
+        if (not expired) {
+          result.add(msg);
+        };
+      };
+    };
+    let arr = result.toArray();
+    let limited = List.empty<Message>();
+    var count = 0;
+    for (msg in arr.vals()) {
+      if (count < effectiveLimit) {
+        limited.add(msg);
+        count += 1;
+      };
+    };
+    limited.toArray();
+  };
+
+  // DTN: send a message with full envelope metadata
+  // Existing sendMessage is unchanged; this is a new additive function
+  public shared ({ caller }) func sendMessageWithDtn(
+    conversationId : Nat,
+    content : Text,
+    messageType : MessageType,
+    mediaBlob : ?Storage.ExternalBlob,
+    mediaName : ?Text,
+    mediaSize : ?Nat64,
+    replyToId : ?Nat,
+    mentionedPrincipals : ?[Principal],
+    messageUuid : ?Text,
+    senderDeviceId : ?Text,
+    recipientHint : ?Text,
+    ttl : ?Int,
+  ) : async Nat {
+    requireAuth(caller);
+    if (not isConversationMember(conversationId, caller)) {
+      Runtime.trap("Not a member of this conversation");
+    };
+    if (content == "" and mediaBlob == null) {
+      Runtime.trap("Message cannot be empty");
+    };
+    if (content.size() > MAX_MESSAGE_LENGTH) {
+      Runtime.trap("Message exceeds maximum length");
+    };
+    // DTN deduplication: idempotent send
+    switch (messageUuid) {
+      case (?uuid) {
+        if (seenUuids.get(uuid) != null) {
+          return 0; // already stored — return silently
+        };
+        seenUuids.add(uuid, true);
+      };
+      case (null) {};
+    };
+    // Check blocked status for direct chats
+    switch (conversations.get(conversationId)) {
+      case (?conv) {
+        switch (conv.conversationType) {
+          case (#Direct) {
+            let members = getConversationMembers(conversationId);
+            for ((p, _) in members.entries()) {
+              if (p != caller) {
+                if (isBlocked(p, caller) or isBlocked(caller, p)) {
+                  Runtime.trap("Cannot send messages in this conversation");
+                };
+              };
+            };
+          };
+          case (_) {};
+        };
+      };
+      case (null) { Runtime.trap("Conversation not found") };
+    };
+    let msgId = nextMessageId;
+    nextMessageId += 1;
+    let msg : Message = {
+      id = msgId;
+      conversationId;
+      sender = caller;
+      content;
+      messageType;
+      mediaBlob;
+      mediaName;
+      mediaSize;
+      replyToId;
+      timestamp = Time.now();
+      deleted = false;
+      reactions = [];
+    };
+    let messages = getConversationMessages(conversationId);
+    messages.add(msg);
+    // Store DTN envelope metadata separately (avoids stable variable incompatibility)
+    switch (messageUuid) {
+      case (?uuid) {
+        let meta : DtnMeta = {
+          messageUuid = uuid;
+          messageId = msgId;
+          conversationId;
+          senderDeviceId;
+          recipientHint;
+          ttl;
+          hopCount = 0;
+          contentHash = null;
+          protocolVersion = 1;
+        };
+        dtnMetadata.add(uuid, meta);
+        messageIdToUuid.add(msgId, uuid);
+      };
+      case (null) {};
+    };
+    cleanupExpiredMessages(conversationId);
+    switch (userProfiles.get(caller)) {
+      case (?prof) {
+        userProfiles.add(caller, { prof with lastSeen = Time.now() });
+      };
+      case (null) {};
+    };
+    let allMembers = getConversationMembers(conversationId);
+    for ((p, _) in allMembers.entries()) {
+      if (p != caller) {
+        addNotification(p, #NewMessage, ?conversationId, ?caller);
+      };
+    };
+    switch (mentionedPrincipals) {
+      case (?principals) {
+        for (mp in principals.vals()) {
+          if (mp != caller and isConversationMember(conversationId, mp)) {
+            addNotification(mp, #Mention, ?conversationId, ?caller);
+          };
+        };
+      };
+      case (null) {};
+    };
+    msgId;
   };
 
   public query ({ caller }) func getConversations() : async [ConversationPreview] {

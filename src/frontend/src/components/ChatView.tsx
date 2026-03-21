@@ -32,6 +32,7 @@ import {
 } from "../hooks/useQueries";
 import { ConversationType } from "../hooks/useQueries";
 import type { ConversationPreview, Message } from "../hooks/useQueries";
+import { useSync } from "../hooks/useSync";
 import { isEncryptedMessage } from "../utils/e2ee";
 import { formatFileSize } from "../utils/formatting";
 import { ChatSkeleton } from "./ChatSkeleton";
@@ -66,6 +67,13 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
   const { mutate: sendMessage, isPending: isSending } = useSendMessage();
   const { mutate: markAsRead } = useMarkAsRead();
   const { mutate: setTyping } = useSetTyping();
+
+  // DTN sync hook — provides offline detection and outbox count
+  const {
+    isOnline,
+    outboxCount,
+    sendMessage: syncSend,
+  } = useSync(conversation.id);
 
   const [text, setText] = useState("");
   const lastTypingSent = useRef(0);
@@ -322,12 +330,13 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
     const trimmed = text.trim();
     if (!trimmed && !pendingFile) return;
 
-    let mediaBlob: ExternalBlob | null = null;
-    let mediaName: string | null = null;
-    let mediaSize: bigint | null = null;
-    const msgType = getMessageType(pendingFile) as unknown as MessageType;
-
+    // --- Media / file path: use legacy IC mutation directly ---
     if (pendingFile) {
+      let mediaBlob: ExternalBlob | null = null;
+      let mediaName: string | null = null;
+      let mediaSize: bigint | null = null;
+      const msgType = getMessageType(pendingFile) as unknown as MessageType;
+
       try {
         setUploadProgress(0);
         const arrayBuffer = await pendingFile.arrayBuffer();
@@ -341,11 +350,56 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
         setUploadProgress(null);
         return;
       }
+
+      // Parse @mentions from plaintext before encrypting
+      let mentionedPrincipals: string[] | null = null;
+      if (encryptionReady && trimmed && conversation.members) {
+        const mentionNames = parseMentions(trimmed);
+        if (mentionNames.length > 0) {
+          mentionedPrincipals = [];
+          for (const m of conversation.members) {
+            if (mentionNames.some((mn) => m.name.toLowerCase().includes(mn))) {
+              mentionedPrincipals.push(m.principal.toString());
+            }
+          }
+        }
+      }
+
+      const contentToSend =
+        encryptionReady && trimmed ? await encrypt(trimmed) : trimmed;
+
+      sendMessage(
+        {
+          conversationId: conversation.id,
+          content: contentToSend,
+          messageType: msgType,
+          mediaBlob,
+          mediaName,
+          mediaSize,
+          replyToId: replyTo ? replyTo.id : null,
+          mentionedPrincipals: encryptionReady ? mentionedPrincipals : null,
+        },
+        {
+          onSuccess: () => {
+            setText("");
+            setReplyTo(null);
+            setPendingFile(null);
+            setUploadProgress(null);
+            inputRef.current?.focus();
+          },
+          onError: () => {
+            toast.error("Failed to send message");
+            setUploadProgress(null);
+          },
+        },
+      );
+      return;
     }
 
-    // Parse @mentions from plaintext before encrypting
+    // --- Text-only path: route through DTN outbox ---
+    // Parse @mentions before encrypting
     let mentionedPrincipals: string[] | null = null;
-    if (encryptionReady && trimmed && conversation.members) {
+    if (encryptionReady && conversation.members) {
       const mentionNames = parseMentions(trimmed);
       if (mentionNames.length > 0) {
         mentionedPrincipals = [];
@@ -357,35 +411,24 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
       }
     }
 
-    // Encrypt content if E2EE is ready
-    const contentToSend =
-      encryptionReady && trimmed ? await encrypt(trimmed) : trimmed;
+    // Encrypt if E2EE is ready
+    const contentToSend = encryptionReady ? await encrypt(trimmed) : trimmed;
 
-    sendMessage(
-      {
+    try {
+      await syncSend({
         conversationId: conversation.id,
         content: contentToSend,
-        messageType: msgType,
-        mediaBlob,
-        mediaName,
-        mediaSize,
-        replyToId: replyTo ? replyTo.id : null,
-        mentionedPrincipals: encryptionReady ? mentionedPrincipals : null,
-      },
-      {
-        onSuccess: () => {
-          setText("");
-          setReplyTo(null);
-          setPendingFile(null);
-          setUploadProgress(null);
-          inputRef.current?.focus();
-        },
-        onError: () => {
-          toast.error("Failed to send message");
-          setUploadProgress(null);
-        },
-      },
-    );
+        messageType: "Text" as unknown as string,
+        recipientHint: conversation.members?.[0]?.principal?.toString(),
+        replyToId: replyTo ? replyTo.id : undefined,
+        mentionedPrincipals,
+      });
+      setText("");
+      setReplyTo(null);
+      inputRef.current?.focus();
+    } catch {
+      toast.error("Failed to send message");
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -461,6 +504,13 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
           >
             <Timer className="w-4 h-4" />
           </Button>
+          {/* Offline badge — shown when device has no network */}
+          {!isOnline && (
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[10px] font-medium shrink-0">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500 inline-block" />
+              Offline
+            </div>
+          )}
           {isGroup && (
             <Button
               variant="ghost"
@@ -732,16 +782,23 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
                   <Mic className="w-4 h-4" />
                 </Button>
               )}
+              {/* Send button with DTN outbox badge */}
               <Button
                 type="submit"
                 size="icon"
                 disabled={(!text.trim() && !pendingFile) || isSending}
-                className="h-9 w-9 shrink-0"
+                className="h-9 w-9 shrink-0 relative"
+                data-ocid="chat.submit_button"
               >
                 {isSending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Send className="w-4 h-4" />
+                )}
+                {outboxCount > 0 && (
+                  <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-amber-500 text-[9px] text-white flex items-center justify-center font-bold">
+                    {outboxCount > 9 ? "9+" : outboxCount}
+                  </span>
                 )}
               </Button>
             </>
