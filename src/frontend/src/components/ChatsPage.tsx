@@ -6,7 +6,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, MessageSquare, Plus, Search, Users } from "lucide-react";
 import { useState } from "react";
 import { useConversations } from "../hooks/useQueries";
@@ -74,7 +73,7 @@ export function ChatsPage({ onOpenChat }: ChatsPageProps) {
       </div>
 
       {/* Conversation list */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {isLoading && (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -120,7 +119,7 @@ export function ChatsPage({ onOpenChat }: ChatsPageProps) {
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       <NewChatDialog
         open={showNewChat}

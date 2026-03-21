@@ -166,7 +166,6 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
         <ChatView
           conversation={activeConversation}
           onBack={handleBackFromChat}
-          onOpenConversation={handleOpenChat}
         />
       );
     }

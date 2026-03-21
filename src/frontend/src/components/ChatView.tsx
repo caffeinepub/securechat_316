@@ -46,7 +46,6 @@ import { UserAvatar } from "./UserAvatar";
 interface ChatViewProps {
   conversation: ConversationPreview;
   onBack: () => void;
-  onOpenConversation?: (conversationId: bigint) => void;
 }
 
 function formatRecordingTime(seconds: number): string {
@@ -55,11 +54,7 @@ function formatRecordingTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function ChatView({
-  conversation,
-  onBack,
-  onOpenConversation,
-}: ChatViewProps) {
+export function ChatView({ conversation, onBack }: ChatViewProps) {
   const { identity } = useInternetIdentity();
   const myPrincipal = identity?.getPrincipal().toString() ?? "";
 
@@ -761,7 +756,6 @@ export function ChatView({
           onOpenChange={setShowGroupInfo}
           conversationId={conversation.id}
           onLeft={onBack}
-          onOpenThread={onOpenConversation}
         />
       )}
 

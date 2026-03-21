@@ -9,7 +9,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
@@ -57,7 +56,6 @@ import {
   saveKeyPair,
 } from "../utils/keyStore";
 import { EditGroupDialog } from "./EditGroupDialog";
-import { GroupThreadsAccordion } from "./GroupThreadsAccordion";
 import { ManageMembersDialog } from "./ManageMembersDialog";
 import { UserAvatar } from "./UserAvatar";
 
@@ -66,7 +64,6 @@ interface GroupInfoPanelProps {
   onOpenChange: (open: boolean) => void;
   conversationId: bigint;
   onLeft: () => void;
-  onOpenThread?: (threadConversationId: bigint) => void;
 }
 
 export function GroupInfoPanel({
@@ -74,7 +71,6 @@ export function GroupInfoPanel({
   onOpenChange,
   conversationId,
   onLeft,
-  onOpenThread,
 }: GroupInfoPanelProps) {
   const { identity } = useInternetIdentity();
   const { actor } = useActor();
@@ -182,8 +178,8 @@ export function GroupInfoPanel({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-80 sm:w-96 p-0 flex flex-col">
-          <SheetHeader className="px-4 pt-4 pb-3 border-b">
+        <SheetContent className="w-80 sm:w-96 p-0 flex flex-col h-full max-h-dvh overflow-hidden">
+          <SheetHeader className="px-4 pt-4 pb-3 border-b shrink-0">
             <SheetTitle className="text-left">Group Info</SheetTitle>
           </SheetHeader>
 
@@ -200,7 +196,7 @@ export function GroupInfoPanel({
           )}
 
           {groupInfo && (
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-y-auto min-h-0">
               <div className="px-4 py-4 space-y-5">
                 {/* Group header */}
                 <div className="flex flex-col items-center text-center">
@@ -294,16 +290,6 @@ export function GroupInfoPanel({
 
                 <Separator />
 
-                {/* Threads */}
-                <GroupThreadsAccordion
-                  parentGroupId={conversationId}
-                  isAdmin={!!isAdmin}
-                  onOpenThread={(threadId) => {
-                    onOpenChange(false);
-                    onOpenThread?.(threadId);
-                  }}
-                />
-
                 {/* Leave group */}
                 <Button
                   variant="ghost"
@@ -329,7 +315,7 @@ export function GroupInfoPanel({
                   </>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           )}
         </SheetContent>
       </Sheet>
@@ -379,8 +365,8 @@ export function GroupInfoPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete group permanently?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete the group, all messages, and all
-              threads. This cannot be undone.
+              This will permanently delete the group and all messages. This
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

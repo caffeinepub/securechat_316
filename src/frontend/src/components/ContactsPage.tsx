@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Search, Upload, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import {
@@ -72,7 +71,7 @@ export function ContactsPage({ onOpenChat }: ContactsPageProps) {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {/* Pending requests */}
         {pendingRequests.length > 0 && (
           <div className="px-4 mb-4">
@@ -147,7 +146,7 @@ export function ContactsPage({ onOpenChat }: ContactsPageProps) {
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
 
       <AddContactDialog
         open={showAddContact}
