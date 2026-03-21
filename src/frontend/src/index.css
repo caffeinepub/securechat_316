@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   RelayNet Landing Page Fonts
+   ============================================================ */
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/fonts/JetBrainsMono.woff2") format("woff2");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "General Sans";
+  src: url("/assets/fonts/GeneralSans.woff2") format("woff2");
+  font-weight: 200 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer base {
   :root {
     --background: #ffffff;
@@ -10,32 +37,32 @@
     --card-foreground: #0f172a;
     --popover: #ffffff;
     --popover-foreground: #0f172a;
-    --primary: #0d9488;
+    --primary: oklch(0.62 0.14 85);
     --primary-foreground: #ffffff;
-    --secondary: #f0fdfa;
-    --secondary-foreground: #134e4a;
+    --secondary: #f8f7f4;
+    --secondary-foreground: #1c1a14;
     --muted: #f8fafc;
     --muted-foreground: #64748b;
-    --accent: #f0fdfa;
-    --accent-foreground: #0f766e;
+    --accent: #f8f7f4;
+    --accent-foreground: oklch(0.62 0.14 85);
     --destructive: #dc2626;
     --destructive-foreground: #ffffff;
     --border: #e2e8f0;
     --input: #e2e8f0;
-    --ring: #0d9488;
-    --chart-1: #0d9488;
+    --ring: oklch(0.62 0.14 85);
+    --chart-1: oklch(0.62 0.14 85);
     --chart-2: #7c3aed;
     --chart-3: #0891b2;
     --chart-4: #4f46e5;
-    --chart-5: #2dd4bf;
-    --sidebar: #f0fdfa;
-    --sidebar-foreground: #134e4a;
-    --sidebar-primary: #0d9488;
+    --chart-5: #f59e0b;
+    --sidebar: oklch(0.97 0.005 100);
+    --sidebar-foreground: #1c1a14;
+    --sidebar-primary: oklch(0.62 0.14 85);
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #ccfbf1;
-    --sidebar-accent-foreground: #0f766e;
-    --sidebar-border: #99f6e4;
-    --sidebar-ring: #0d9488;
+    --sidebar-accent: #f0ede6;
+    --sidebar-accent-foreground: oklch(0.62 0.14 85);
+    --sidebar-border: oklch(0.88 0.01 100);
+    --sidebar-ring: oklch(0.62 0.14 85);
     --font-sans: Geist, ui-sans-serif, sans-serif, system-ui;
     --font-serif: Noto Serif Georgian, ui-serif, serif;
     --font-mono: Geist Mono, ui-monospace, monospace;
@@ -64,38 +91,38 @@
   }
 
   .dark {
-    --background: #020617;
-    --foreground: #f8fafc;
-    --card: #0f172a;
-    --card-foreground: #f8fafc;
-    --popover: #0f172a;
-    --popover-foreground: #f8fafc;
-    --primary: #2dd4bf;
-    --primary-foreground: #042f2e;
-    --secondary: #1e293b;
-    --secondary-foreground: #f8fafc;
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    --accent: #1e293b;
-    --accent-foreground: #5eead4;
-    --destructive: #991b1b;
-    --destructive-foreground: #f8fafc;
-    --border: #1e293b;
-    --input: #1e293b;
-    --ring: #2dd4bf;
-    --chart-1: #2dd4bf;
+    --background: oklch(0.08 0.005 120);
+    --foreground: oklch(0.92 0.008 100);
+    --card: oklch(0.1 0.005 120);
+    --card-foreground: oklch(0.92 0.008 100);
+    --popover: oklch(0.1 0.005 120);
+    --popover-foreground: oklch(0.92 0.008 100);
+    --primary: oklch(0.72 0.12 85);
+    --primary-foreground: oklch(0.1 0.005 120);
+    --secondary: oklch(0.13 0.005 120);
+    --secondary-foreground: oklch(0.88 0.008 100);
+    --muted: oklch(0.13 0.005 120);
+    --muted-foreground: oklch(0.55 0.01 120);
+    --accent: oklch(0.13 0.005 120);
+    --accent-foreground: oklch(0.72 0.12 85);
+    --destructive: oklch(0.45 0.18 25);
+    --destructive-foreground: oklch(0.95 0.01 100);
+    --border: oklch(0.18 0.005 120);
+    --input: oklch(0.18 0.005 120);
+    --ring: oklch(0.72 0.12 85);
+    --chart-1: oklch(0.72 0.12 85);
     --chart-2: #8b5cf6;
     --chart-3: #06b6d4;
     --chart-4: #6366f1;
-    --chart-5: #14b8a6;
-    --sidebar: #042f2e;
-    --sidebar-foreground: #f0fdfa;
-    --sidebar-primary: #2dd4bf;
-    --sidebar-primary-foreground: #042f2e;
-    --sidebar-accent: #134e4a;
-    --sidebar-accent-foreground: #5eead4;
-    --sidebar-border: #134e4a;
-    --sidebar-ring: #2dd4bf;
+    --chart-5: #f59e0b;
+    --sidebar: oklch(0.07 0.004 120);
+    --sidebar-foreground: oklch(0.88 0.008 100);
+    --sidebar-primary: oklch(0.72 0.12 85);
+    --sidebar-primary-foreground: oklch(0.1 0.005 120);
+    --sidebar-accent: oklch(0.12 0.005 120);
+    --sidebar-accent-foreground: oklch(0.72 0.12 85);
+    --sidebar-border: oklch(0.18 0.005 120);
+    --sidebar-ring: oklch(0.72 0.12 85);
     --font-sans: Geist, ui-sans-serif, sans-serif, system-ui;
     --font-serif: Noto Serif Georgian, ui-serif, serif;
     --font-mono: Geist Mono, ui-monospace, monospace;
@@ -140,7 +167,6 @@
 
 /* ============================================================
    Dark mode: reinforce form element text visibility
-   on the dark blue input backgrounds (#1e293b)
    ============================================================ */
 .dark input,
 .dark input[data-slot="input"],
@@ -178,4 +204,61 @@
 /* Ensure outline buttons in dark mode have visible borders */
 .dark [data-slot="button"][class*="border"] {
   border-color: rgba(148, 163, 184, 0.25);
+}
+
+/* ============================================================
+   RelayNet Landing Page — scoped styles
+   ============================================================ */
+.landing-root {
+  background-color: oklch(0.08 0.005 120);
+  color: oklch(0.92 0.008 100);
+  font-family: "General Sans", ui-sans-serif, sans-serif;
+}
+
+/* Grid crosshatch texture for hero */
+.hero-grid-bg {
+  background-image: linear-gradient(
+      oklch(0.92 0.008 100 / 0.025) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, oklch(0.92 0.008 100 / 0.025) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Logo icon — CSS grid/relay pattern */
+.relay-logo-icon {
+  width: 22px;
+  height: 22px;
+  position: relative;
+  flex-shrink: 0;
+  border: 1px solid oklch(0.72 0.12 85 / 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.relay-logo-icon::before {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: oklch(0.72 0.12 85);
+  border-radius: 50%;
+}
+
+.relay-logo-icon::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 1px solid oklch(0.72 0.12 85 / 0.3);
+  border-radius: 50%;
+}
+
+.font-relay-mono {
+  font-family: "JetBrains Mono", "Geist Mono", ui-monospace, monospace;
+}
+
+.font-relay-display {
+  font-family: "Bricolage Grotesque", ui-sans-serif, sans-serif;
 }

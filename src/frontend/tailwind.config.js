@@ -69,6 +69,9 @@ export default {
         sans: ["var(--font-sans)"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+        "relay-mono": ["'JetBrains Mono'", "'Geist Mono'", "ui-monospace", "monospace"],
+        "relay-display": ["'Bricolage Grotesque'", "ui-sans-serif", "sans-serif"],
+        "relay-body": ["'General Sans'", "ui-sans-serif", "sans-serif"],
       },
       boxShadow: {
         "2xs": "var(--shadow-2xs)",

@@ -10,7 +10,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import {
   Bell,
-  Lock,
   LogOut,
   MessageSquare,
   Radio,
@@ -122,8 +121,11 @@ function DesktopSidebar({
     <TooltipProvider delayDuration={200}>
       <aside className="w-[68px] bg-sidebar border-r border-sidebar-border flex flex-col items-center py-4 shrink-0">
         {/* Logo */}
-        <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-sm mb-6">
-          <Lock className="w-5 h-5 text-primary-foreground" />
+        <div className="flex flex-col items-center gap-1 mb-6">
+          <div className="relay-logo-icon" />
+          <span className="font-relay-mono text-[8px] tracking-[0.2em] text-sidebar-foreground/40 uppercase">
+            Relay
+          </span>
         </div>
 
         {/* Nav items */}

@@ -188,6 +188,13 @@ actor {
     senderEmail : Text;
   };
 
+  type SyncSession = {
+    offer : Text;
+    var answer : ?Text;
+    createdAt : Int;
+  };
+
+
   // State
 
   var userProfiles : Map.Map<Principal, Profile> = Map.empty();
@@ -251,6 +258,8 @@ actor {
 
   // vetKD encrypted email config
   var userEncryptedEmailConfigs : Map.Map<Principal, EncryptedEmailConfig> = Map.empty();
+  var syncSessions : Map.Map<Text, SyncSession> = Map.empty();
+  var nextSyncSessionId : Nat = 1;
 
   // Constants
 
@@ -2381,5 +2390,37 @@ actor {
     conversationGroupKeys.remove(conversationId);
   };
 
+
+
+  // --- DTN Phase 2: WebRTC Signaling ---
+
+  public shared func createSyncSession(offer : Text) : async Text {
+    let sessionId = debug_show(nextSyncSessionId) # "-" # debug_show(Time.now());
+    nextSyncSessionId += 1;
+    let session : SyncSession = {
+      offer = offer;
+      var answer = null;
+      createdAt = Time.now();
+    };
+    syncSessions.add(sessionId, session);
+    sessionId
+  };
+
+  public shared func completeSyncSession(sessionId : Text, answer : Text) : async Bool {
+    switch (syncSessions.get(sessionId)) {
+      case (?session) {
+        session.answer := ?answer;
+        true
+      };
+      case null { false };
+    }
+  };
+
+  public query func getSyncSession(sessionId : Text) : async ?(Text, ?Text) {
+    switch (syncSessions.get(sessionId)) {
+      case (?session) { ?(session.offer, session.answer) };
+      case null { null };
+    }
+  };
 
 };

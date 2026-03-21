@@ -22,12 +22,14 @@ import {
   LogOut,
   Monitor,
   Moon,
+  Radio,
   Sun,
   UserSearch,
 } from "lucide-react";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useActor } from "../hooks/useActor";
 import {
   useDiscoveryMode,
   useProfile,
@@ -39,6 +41,7 @@ import { BlockedUsersDialog } from "./BlockedUsersDialog";
 import { EditProfileDialog } from "./EditProfileDialog";
 import { EmailServiceConfig } from "./EmailServiceConfig";
 import { EmailVerificationSection } from "./EmailVerificationSection";
+import { QrSyncModal } from "./QrSyncModal";
 import { SettingsItem } from "./SettingsItem";
 import { UserAvatar } from "./UserAvatar";
 
@@ -210,9 +213,11 @@ interface SettingsPageProps {
 
 export function SettingsPage({ onLogout }: SettingsPageProps) {
   const { data: profile } = useProfile();
+  const { actor } = useActor();
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showBlocked, setShowBlocked] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showQrSync, setShowQrSync] = useState(false);
 
   return (
     <div className="flex flex-col h-full">
@@ -294,6 +299,22 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
             </div>
           </div>
 
+          {/* Mesh Sync */}
+          <div>
+            <h2 className="text-xs font-semibold uppercase text-muted-foreground mb-2 tracking-wider px-1">
+              Mesh Sync
+            </h2>
+            <div className="rounded-xl border divide-y">
+              <SettingsItem
+                icon={Radio}
+                label="QR Sync"
+                description="Exchange messages directly with a nearby device"
+                onClick={() => setShowQrSync(true)}
+                data-ocid="settings.qrsync.button"
+              />
+            </div>
+          </div>
+
           {/* About */}
           <div>
             <h2 className="text-xs font-semibold uppercase text-muted-foreground mb-2 tracking-wider px-1">
@@ -302,8 +323,8 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
             <div className="rounded-xl border divide-y">
               <SettingsItem
                 icon={Lock}
-                label="SecureChat"
-                description="Private messaging on the Internet Computer"
+                label="RelayNet"
+                description="Unkillable communication infrastructure"
               />
               <SettingsItem icon={Info} label="Version" description="1.0.0" />
             </div>
@@ -333,6 +354,14 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
       )}
 
       <BlockedUsersDialog open={showBlocked} onOpenChange={setShowBlocked} />
+
+      {actor && (
+        <QrSyncModal
+          open={showQrSync}
+          onOpenChange={setShowQrSync}
+          actor={actor}
+        />
+      )}
 
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent>
