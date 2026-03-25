@@ -10,6 +10,7 @@ import { ContactsPage } from "./components/ContactsPage";
 import { LandingPage } from "./components/LandingPage";
 import { NotificationsPanel } from "./components/NotificationsPanel";
 import { PinSetupModal } from "./components/PinSetupModal";
+import { PinUnlockModal } from "./components/PinUnlockModal";
 import { ProfileSetupDialog } from "./components/ProfileSetupDialog";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { SettingsPage } from "./components/SettingsPage";
@@ -17,6 +18,7 @@ import { StatusPage } from "./components/StatusPage";
 import { TwoFactorGate } from "./components/TwoFactorGate";
 import { useActor } from "./hooks/useActor";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
+import { isUnlocked } from "./hooks/usePinSession";
 import {
   useConversations,
   useNotifications,
@@ -124,6 +126,8 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
   // PIN setup gate — checked once after profile is confirmed
   const [pinCheckDone, setPinCheckDone] = useState(false);
   const [needsPinSetup, setNeedsPinSetup] = useState(false);
+  const [needsPinUnlock, setNeedsPinUnlock] = useState(false);
+  const [backupBlob, setBackupBlob] = useState<Uint8Array | null>(null);
 
   // Keyboard shortcut for search (Ctrl+K / Cmd+K)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -150,25 +154,37 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
     actor
       .getEncryptedKeyBackup()
       .then(async (result) => {
-        const hasBackup = result && (result as Uint8Array).length > 0;
-        if (!hasBackup && myPrincipal) {
-          // No backup exists — ensure we have a local key pair generated and
-          // published BEFORE showing PinSetupModal, so exportAllKeys() picks it up.
-          const existing = await getKeyPair(myPrincipal);
-          if (!existing) {
-            const kp = await generateKeyPair();
-            const jwk = await exportKeyPairAsJwk(kp);
-            await saveKeyPair(myPrincipal, jwk);
-            const pubRaw = await exportPublicKey(kp.publicKey);
-            try {
-              await actor.publishPublicKey(pubRaw);
-            } catch {
-              // Acceptable — may already be published
+        const blob = result as Uint8Array | null;
+        const hasBackup = blob && blob.length > 0;
+
+        if (hasBackup) {
+          // Backup on-chain — show PIN unlock unless session already active
+          if (isUnlocked()) {
+            setPinCheckDone(true);
+          } else {
+            setBackupBlob(blob);
+            setNeedsPinUnlock(true);
+            setPinCheckDone(true);
+          }
+        } else {
+          // No backup — generate key pair first, then prompt PIN setup
+          if (myPrincipal) {
+            const existing = await getKeyPair(myPrincipal);
+            if (!existing) {
+              const kp = await generateKeyPair();
+              const jwk = await exportKeyPairAsJwk(kp);
+              await saveKeyPair(myPrincipal, jwk);
+              const pubRaw = await exportPublicKey(kp.publicKey);
+              try {
+                await actor.publishPublicKey(pubRaw);
+              } catch {
+                /* ok */
+              }
             }
           }
+          setNeedsPinSetup(true);
+          setPinCheckDone(true);
         }
-        setNeedsPinSetup(!hasBackup);
-        setPinCheckDone(true);
       })
       .catch(async () => {
         // Treat errors as "no backup" — still ensure key pair exists
@@ -245,6 +261,20 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
         return <SettingsPage onLogout={onLogout} />;
     }
   };
+
+  // PIN unlock gate — backup exists but session is locked
+  if (hasProfile && pinCheckDone && needsPinUnlock && backupBlob) {
+    return (
+      <>
+        <PinUnlockModal
+          open={true}
+          backupBlob={backupBlob}
+          onUnlocked={() => setNeedsPinUnlock(false)}
+        />
+        <Toaster position="bottom-right" />
+      </>
+    );
+  }
 
   // Show PIN setup gate if profile exists but no key backup found
   if (hasProfile && pinCheckDone && needsPinSetup) {
