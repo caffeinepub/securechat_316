@@ -25,6 +25,12 @@ interface UseE2EEResult {
   encrypt: (plaintext: string) => Promise<string>;
   decryptMessages: (messages: Message[]) => Promise<Map<bigint, string>>;
   myPublicKeyRaw: Uint8Array | null;
+  /** True when a PIN-encrypted backup exists on-chain but no local keys found */
+  hasPendingBackup: boolean;
+  /** The encrypted backup blob, ready for PinUnlockModal */
+  pendingBackupBlob: Uint8Array | null;
+  /** Call after PinUnlockModal has imported keys, to restart E2EE init */
+  onKeysRestored: () => void;
 }
 
 export function useE2EE(
@@ -39,9 +45,15 @@ export function useE2EE(
   const [myPublicKeyRaw, setMyPublicKeyRaw] = useState<Uint8Array | null>(null);
   const conversationKeyRef = useRef<CryptoKey | null>(null);
 
+  // PIN backup state
+  const [hasPendingBackup, setHasPendingBackup] = useState(false);
+  const [pendingBackupBlob, setPendingBackupBlob] = useState<Uint8Array | null>(
+    null,
+  );
+  const [keysRestoredSignal, setKeysRestoredSignal] = useState(0);
+
   const isGroup = conversation?.conversationType === ConversationType.Group;
 
-  // Initialize: ensure we have a key pair and derive/fetch conversation key
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
   useEffect(() => {
     if (!actor || !myPrincipal || !conversation) {
@@ -58,17 +70,32 @@ export function useE2EE(
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let keyPairCache: CryptoKeyPair | null = null;
 
-    const ensureKeyPair = async (): Promise<CryptoKeyPair> => {
+    const ensureKeyPair = async (): Promise<CryptoKeyPair | null> => {
       if (keyPairCache) return keyPairCache;
 
       let myKeyPair: CryptoKeyPair;
 
-      // Check IndexedDB
+      // Check IndexedDB for local keys
       const storedKp = await getKeyPair(myPrincipal);
       if (storedKp) {
         myKeyPair = await importKeyPairFromJwk(storedKp);
       } else {
-        // Generate new key pair
+        // No local keys — check for on-chain encrypted backup first
+        try {
+          const backupResult = await actor.getEncryptedKeyBackup();
+          if (backupResult && (backupResult as Uint8Array).length > 0) {
+            // Signal PinUnlockModal
+            setPendingBackupBlob(new Uint8Array(backupResult as Uint8Array));
+            setHasPendingBackup(true);
+            setIsInitializing(false);
+            return null; // Pause — wait for user to unlock
+          }
+        } catch {
+          // Ignore — may not have the function or network error
+        }
+
+        // No backup either — generate new key pair (first device)
+        // PIN setup is now handled at the App level before reaching here
         myKeyPair = await generateKeyPair();
         const jwk = await exportKeyPairAsJwk(myKeyPair);
         await saveKeyPair(myPrincipal, jwk);
@@ -142,14 +169,11 @@ export function useE2EE(
       );
       conversationKeyRef.current = groupKey;
 
-      // Any member who has the group key distributes it to members who are missing it
       distributeToMissingMembers(conv, myKeyPair, groupKey).catch(() => {});
 
       return true;
     };
 
-    // Wrap and publish the group key for all members whose public keys
-    // are available. Idempotent — safe to call even if keys already exist.
     const distributeToMissingMembers = async (
       conv: ConversationPreview,
       myKeyPair: CryptoKeyPair,
@@ -187,6 +211,7 @@ export function useE2EE(
       try {
         const myKeyPair = await ensureKeyPair();
         if (cancelled) return;
+        if (!myKeyPair) return; // Waiting for PIN unlock
 
         const ready = isGroup
           ? await deriveGroupKey(conversation, myKeyPair)
@@ -197,8 +222,6 @@ export function useE2EE(
         if (ready) {
           setEncryptionReady(true);
 
-          // Any group member periodically distributes the group key to members
-          // whose public keys weren't available during initial distribution
           if (isGroup && conversationKeyRef.current) {
             const groupKey = conversationKeyRef.current;
             distributeInterval = setInterval(() => {
@@ -212,7 +235,6 @@ export function useE2EE(
             }, 5000);
           }
         } else {
-          // Peer key not available yet — retry in 3s
           retryTimer = setTimeout(attempt, 3000);
         }
       } catch (err) {
@@ -229,7 +251,14 @@ export function useE2EE(
       if (retryTimer) clearTimeout(retryTimer);
       if (distributeInterval) clearInterval(distributeInterval);
     };
-  }, [actor, myPrincipal, conversation?.id, isGroup]);
+  }, [actor, myPrincipal, conversation?.id, isGroup, keysRestoredSignal]);
+
+  const onKeysRestored = useCallback(() => {
+    setHasPendingBackup(false);
+    setPendingBackupBlob(null);
+    // Increment signal to re-trigger the effect
+    setKeysRestoredSignal((n) => n + 1);
+  }, []);
 
   const encrypt = useCallback(async (plaintext: string): Promise<string> => {
     if (!conversationKeyRef.current) return plaintext;
@@ -264,5 +293,8 @@ export function useE2EE(
     encrypt,
     decryptMessages,
     myPublicKeyRaw,
+    hasPendingBackup,
+    pendingBackupBlob,
+    onKeysRestored,
   };
 }

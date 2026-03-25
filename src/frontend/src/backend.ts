@@ -258,6 +258,9 @@ export interface backendInterface {
     _caffeineStorageRefillCashier(refillInformation: _CaffeineStorageRefillInformation | null): Promise<_CaffeineStorageRefillResult>;
     _caffeineStorageUpdateGatewayPrincipals(): Promise<void>;
     acceptContactRequest(from: Principal): Promise<void>;
+    deleteEncryptedKeyBackup(): Promise<void>;
+    getEncryptedKeyBackup(): Promise<Uint8Array | null>;
+    storeEncryptedKeyBackup(encryptedBlob: Uint8Array): Promise<void>;
     addContactByPrincipal(principalText: string): Promise<void>;
     addGroupMember(conversationId: bigint, member: Principal): Promise<void>;
     addReaction(conversationId: bigint, messageId: bigint, emoji: string): Promise<void>;
@@ -421,99 +424,85 @@ export class Backend implements backendInterface {
     async _caffeineStorageUpdateGatewayPrincipals(): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor._caffeineStorageUpdateGatewayPrincipals();
-                return result;
+                await this.actor._caffeineStorageUpdateGatewayPrincipals();
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor._caffeineStorageUpdateGatewayPrincipals();
-            return result;
+            await this.actor._caffeineStorageUpdateGatewayPrincipals();
         }
     }
     async acceptContactRequest(arg0: Principal): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.acceptContactRequest(arg0);
-                return result;
+                await this.actor.acceptContactRequest(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.acceptContactRequest(arg0);
-            return result;
+            await this.actor.acceptContactRequest(arg0);
         }
     }
     async addContactByPrincipal(arg0: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.addContactByPrincipal(arg0);
-                return result;
+                await this.actor.addContactByPrincipal(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addContactByPrincipal(arg0);
-            return result;
+            await this.actor.addContactByPrincipal(arg0);
         }
     }
     async addGroupMember(arg0: bigint, arg1: Principal): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.addGroupMember(arg0, arg1);
-                return result;
+                await this.actor.addGroupMember(arg0, arg1);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addGroupMember(arg0, arg1);
-            return result;
+            await this.actor.addGroupMember(arg0, arg1);
         }
     }
     async addReaction(arg0: bigint, arg1: bigint, arg2: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.addReaction(arg0, arg1, arg2);
-                return result;
+                await this.actor.addReaction(arg0, arg1, arg2);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.addReaction(arg0, arg1, arg2);
-            return result;
+            await this.actor.addReaction(arg0, arg1, arg2);
         }
     }
     async blockUser(arg0: Principal): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.blockUser(arg0);
-                return result;
+                await this.actor.blockUser(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.blockUser(arg0);
-            return result;
+            await this.actor.blockUser(arg0);
         }
     }
     async clearGroupKeys(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.clearGroupKeys(arg0);
-                return result;
+                await this.actor.clearGroupKeys(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.clearGroupKeys(arg0);
-            return result;
+            await this.actor.clearGroupKeys(arg0);
         }
     }
     async createGroupThread(arg0: bigint, arg1: string): Promise<bigint> {
@@ -575,43 +564,37 @@ export class Backend implements backendInterface {
     async deleteFile(arg0: FileId): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.deleteFile(arg0);
-                return result;
+                await this.actor.deleteFile(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.deleteFile(arg0);
-            return result;
+            await this.actor.deleteFile(arg0);
         }
     }
     async deleteMessage(arg0: bigint, arg1: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.deleteMessage(arg0, arg1);
-                return result;
+                await this.actor.deleteMessage(arg0, arg1);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.deleteMessage(arg0, arg1);
-            return result;
+            await this.actor.deleteMessage(arg0, arg1);
         }
     }
     async deleteStatus(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.deleteStatus(arg0);
-                return result;
+                await this.actor.deleteStatus(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.deleteStatus(arg0);
-            return result;
+            await this.actor.deleteStatus(arg0);
         }
     }
     async exportUserData(): Promise<ExportData> {
@@ -1023,57 +1006,49 @@ export class Backend implements backendInterface {
     async leaveGroup(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.leaveGroup(arg0);
-                return result;
+                await this.actor.leaveGroup(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.leaveGroup(arg0);
-            return result;
+            await this.actor.leaveGroup(arg0);
         }
     }
     async deleteGroup(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.deleteGroup(arg0);
-                return result;
+                await this.actor.deleteGroup(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.deleteGroup(arg0);
-            return result;
+            await this.actor.deleteGroup(arg0);
         }
     }
     async markAsRead(arg0: bigint, arg1: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.markAsRead(arg0, arg1);
-                return result;
+                await this.actor.markAsRead(arg0, arg1);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.markAsRead(arg0, arg1);
-            return result;
+            await this.actor.markAsRead(arg0, arg1);
         }
     }
     async markNotificationsRead(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.markNotificationsRead(arg0);
-                return result;
+                await this.actor.markNotificationsRead(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.markNotificationsRead(arg0);
-            return result;
+            await this.actor.markNotificationsRead(arg0);
         }
     }
     async postStatus(arg0: string, arg1: ExternalBlob | null): Promise<bigint> {
@@ -1107,127 +1082,109 @@ export class Backend implements backendInterface {
     async publishPublicKey(arg0: Uint8Array): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.publishPublicKey(arg0);
-                return result;
+                await this.actor.publishPublicKey(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.publishPublicKey(arg0);
-            return result;
+            await this.actor.publishPublicKey(arg0);
         }
     }
     async reactToStatus(arg0: bigint, arg1: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.reactToStatus(arg0, arg1);
-                return result;
+                await this.actor.reactToStatus(arg0, arg1);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.reactToStatus(arg0, arg1);
-            return result;
+            await this.actor.reactToStatus(arg0, arg1);
         }
     }
     async rejectContactRequest(arg0: Principal): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.rejectContactRequest(arg0);
-                return result;
+                await this.actor.rejectContactRequest(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.rejectContactRequest(arg0);
-            return result;
+            await this.actor.rejectContactRequest(arg0);
         }
     }
     async removeContact(arg0: Principal): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.removeContact(arg0);
-                return result;
+                await this.actor.removeContact(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.removeContact(arg0);
-            return result;
+            await this.actor.removeContact(arg0);
         }
     }
     async removeGroupMember(arg0: bigint, arg1: Principal): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.removeGroupMember(arg0, arg1);
-                return result;
+                await this.actor.removeGroupMember(arg0, arg1);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.removeGroupMember(arg0, arg1);
-            return result;
+            await this.actor.removeGroupMember(arg0, arg1);
         }
     }
     async removeReaction(arg0: bigint, arg1: bigint, arg2: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.removeReaction(arg0, arg1, arg2);
-                return result;
+                await this.actor.removeReaction(arg0, arg1, arg2);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.removeReaction(arg0, arg1, arg2);
-            return result;
+            await this.actor.removeReaction(arg0, arg1, arg2);
         }
     }
     async reportUser(arg0: Principal, arg1: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.reportUser(arg0, arg1);
-                return result;
+                await this.actor.reportUser(arg0, arg1);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.reportUser(arg0, arg1);
-            return result;
+            await this.actor.reportUser(arg0, arg1);
         }
     }
     async requestEmailVerification(arg0: string, arg1: string, arg2: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.requestEmailVerification(arg0, arg1, arg2);
-                return result;
+                await this.actor.requestEmailVerification(arg0, arg1, arg2);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.requestEmailVerification(arg0, arg1, arg2);
-            return result;
+            await this.actor.requestEmailVerification(arg0, arg1, arg2);
         }
     }
     async requestLoginOtp(arg0: string, arg1: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.requestLoginOtp(arg0, arg1);
-                return result;
+                await this.actor.requestLoginOtp(arg0, arg1);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.requestLoginOtp(arg0, arg1);
-            return result;
+            await this.actor.requestLoginOtp(arg0, arg1);
         }
     }
     async searchUsers(arg0: string): Promise<Array<PublicProfile>> {
@@ -1247,15 +1204,13 @@ export class Backend implements backendInterface {
     async sendContactRequest(arg0: Principal): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.sendContactRequest(arg0);
-                return result;
+                await this.actor.sendContactRequest(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.sendContactRequest(arg0);
-            return result;
+            await this.actor.sendContactRequest(arg0);
         }
     }
     async sendMessage(arg0: bigint, arg1: string, arg2: MessageType, arg3: ExternalBlob | null, arg4: string | null, arg5: bigint | null, arg6: bigint | null, arg7: Array<Principal> | null): Promise<bigint> {
@@ -1275,71 +1230,61 @@ export class Backend implements backendInterface {
     async setDisappearingTimer(arg0: bigint, arg1: DisappearingTimer): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.setDisappearingTimer(arg0, to_candid_DisappearingTimer_n83(this._uploadFile, this._downloadFile, arg1));
-                return result;
+                await this.actor.setDisappearingTimer(arg0, to_candid_DisappearingTimer_n83(this._uploadFile, this._downloadFile, arg1));
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.setDisappearingTimer(arg0, to_candid_DisappearingTimer_n83(this._uploadFile, this._downloadFile, arg1));
-            return result;
+            await this.actor.setDisappearingTimer(arg0, to_candid_DisappearingTimer_n83(this._uploadFile, this._downloadFile, arg1));
         }
     }
     async setEncryptedEmailConfig(arg0: Uint8Array, arg1: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.setEncryptedEmailConfig(arg0, arg1);
-                return result;
+                await this.actor.setEncryptedEmailConfig(arg0, arg1);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.setEncryptedEmailConfig(arg0, arg1);
-            return result;
+            await this.actor.setEncryptedEmailConfig(arg0, arg1);
         }
     }
     async setProfile(arg0: string, arg1: string, arg2: ExternalBlob | null): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.setProfile(arg0, arg1, await to_candid_opt_n8(this._uploadFile, this._downloadFile, arg2));
-                return result;
+                await this.actor.setProfile(arg0, arg1, await to_candid_opt_n8(this._uploadFile, this._downloadFile, arg2));
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.setProfile(arg0, arg1, await to_candid_opt_n8(this._uploadFile, this._downloadFile, arg2));
-            return result;
+            await this.actor.setProfile(arg0, arg1, await to_candid_opt_n8(this._uploadFile, this._downloadFile, arg2));
         }
     }
     async setTwoFactorEnabled(arg0: boolean): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.setTwoFactorEnabled(arg0);
-                return result;
+                await this.actor.setTwoFactorEnabled(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.setTwoFactorEnabled(arg0);
-            return result;
+            await this.actor.setTwoFactorEnabled(arg0);
         }
     }
     async setTyping(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.setTyping(arg0);
-                return result;
+                await this.actor.setTyping(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.setTyping(arg0);
-            return result;
+            await this.actor.setTyping(arg0);
         }
     }
     async startDirectChat(arg0: Principal): Promise<bigint> {
@@ -1359,15 +1304,13 @@ export class Backend implements backendInterface {
     async toggleNotificationRead(arg0: bigint): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.toggleNotificationRead(arg0);
-                return result;
+                await this.actor.toggleNotificationRead(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.toggleNotificationRead(arg0);
-            return result;
+            await this.actor.toggleNotificationRead(arg0);
         }
     }
     async transform(arg0: TransformationInput): Promise<TransformationOutput> {
@@ -1387,29 +1330,25 @@ export class Backend implements backendInterface {
     async unblockUser(arg0: Principal): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.unblockUser(arg0);
-                return result;
+                await this.actor.unblockUser(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.unblockUser(arg0);
-            return result;
+            await this.actor.unblockUser(arg0);
         }
     }
     async updateDiscoveryMode(arg0: DiscoveryMode): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.updateDiscoveryMode(to_candid_DiscoveryMode_n85(this._uploadFile, this._downloadFile, arg0));
-                return result;
+                await this.actor.updateDiscoveryMode(to_candid_DiscoveryMode_n85(this._uploadFile, this._downloadFile, arg0));
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.updateDiscoveryMode(to_candid_DiscoveryMode_n85(this._uploadFile, this._downloadFile, arg0));
-            return result;
+            await this.actor.updateDiscoveryMode(to_candid_DiscoveryMode_n85(this._uploadFile, this._downloadFile, arg0));
         }
     }
     async updateGroup(arg0: bigint, arg1: string | null, arg2: ExternalBlob | null): Promise<void> {
@@ -1443,15 +1382,13 @@ export class Backend implements backendInterface {
     async verifyEmailOtp(arg0: string): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.verifyEmailOtp(arg0);
-                return result;
+                await this.actor.verifyEmailOtp(arg0);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.verifyEmailOtp(arg0);
-            return result;
+            await this.actor.verifyEmailOtp(arg0);
         }
     }
     async verifyLoginOtp(arg0: string): Promise<boolean> {
@@ -1468,6 +1405,45 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async deleteEncryptedKeyBackup(): Promise<void> {
+        if (this.processError) {
+            try {
+                await this.actor.deleteEncryptedKeyBackup();
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            await this.actor.deleteEncryptedKeyBackup();
+        }
+    }
+    async getEncryptedKeyBackup(): Promise<Uint8Array | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getEncryptedKeyBackup();
+                return result.length === 0 ? null : result[0];
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getEncryptedKeyBackup();
+            return result.length === 0 ? null : result[0];
+        }
+    }
+    async storeEncryptedKeyBackup(arg0: Uint8Array): Promise<void> {
+        if (this.processError) {
+            try {
+                await this.actor.storeEncryptedKeyBackup(arg0);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            await this.actor.storeEncryptedKeyBackup(arg0);
+        }
+    }
+
 }
 function from_candid_ContactStatus_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ContactStatus): ContactStatus {
     return from_candid_variant_n16(_uploadFile, _downloadFile, value);

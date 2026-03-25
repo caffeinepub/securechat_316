@@ -39,6 +39,7 @@ import { ChatSkeleton } from "./ChatSkeleton";
 import { DisappearingTimerDialog } from "./DisappearingTimerDialog";
 import { GroupInfoPanel } from "./GroupInfoPanel";
 import { MessageBubble } from "./MessageBubble";
+import { PinUnlockModal } from "./PinUnlockModal";
 import { SafetyNumberDialog } from "./SafetyNumberDialog";
 import { SystemMessage } from "./SystemMessage";
 import { TypingIndicator } from "./TypingIndicator";
@@ -87,6 +88,9 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
     Map<bigint, string>
   >(new Map());
 
+  // Local send guard — prevents double-send on rapid clicks
+  const [isSendingLocal, setIsSendingLocal] = useState(false);
+
   // Voice recording state
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -119,6 +123,9 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
     encrypt,
     decryptMessages,
     myPublicKeyRaw,
+    hasPendingBackup,
+    pendingBackupBlob,
+    onKeysRestored,
   } = useE2EE(conversation);
 
   // Helper: check if scroll container is near bottom
@@ -151,7 +158,6 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
 
   // Initial scroll to bottom (instant) once messages load
   // Use rAF inside timeout to ensure DOM has painted
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
   useEffect(() => {
     if (!isLoading && messages.length > 0 && !initialScrollDone.current) {
       const tid = setTimeout(() => {
@@ -330,30 +336,83 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
     const trimmed = text.trim();
     if (!trimmed && !pendingFile) return;
 
-    // --- Media / file path: use legacy IC mutation directly ---
-    if (pendingFile) {
-      let mediaBlob: ExternalBlob | null = null;
-      let mediaName: string | null = null;
-      let mediaSize: bigint | null = null;
-      const msgType = getMessageType(pendingFile) as unknown as MessageType;
+    // Guard against double-send on rapid clicks
+    if (isSendingLocal) return;
+    setIsSendingLocal(true);
 
-      try {
-        setUploadProgress(0);
-        const arrayBuffer = await pendingFile.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
-        mediaBlob = ExternalBlob.fromBytes(uint8Array);
-        mediaBlob.withUploadProgress((pct: number) => setUploadProgress(pct));
-        mediaName = pendingFile.name;
-        mediaSize = BigInt(pendingFile.size);
-      } catch {
-        toast.error("Failed to prepare file");
-        setUploadProgress(null);
+    try {
+      // --- Media / file path: use legacy IC mutation directly ---
+      if (pendingFile) {
+        let mediaBlob: ExternalBlob | null = null;
+        let mediaName: string | null = null;
+        let mediaSize: bigint | null = null;
+        const msgType = getMessageType(pendingFile) as unknown as MessageType;
+
+        try {
+          setUploadProgress(0);
+          const arrayBuffer = await pendingFile.arrayBuffer();
+          const uint8Array = new Uint8Array(arrayBuffer);
+          mediaBlob = ExternalBlob.fromBytes(uint8Array);
+          mediaBlob.withUploadProgress((pct: number) => setUploadProgress(pct));
+          mediaName = pendingFile.name;
+          mediaSize = BigInt(pendingFile.size);
+        } catch {
+          toast.error("Failed to prepare file");
+          setUploadProgress(null);
+          return;
+        }
+
+        // Parse @mentions from plaintext before encrypting
+        let mentionedPrincipals: string[] | null = null;
+        if (encryptionReady && trimmed && conversation.members) {
+          const mentionNames = parseMentions(trimmed);
+          if (mentionNames.length > 0) {
+            mentionedPrincipals = [];
+            for (const m of conversation.members) {
+              if (
+                mentionNames.some((mn) => m.name.toLowerCase().includes(mn))
+              ) {
+                mentionedPrincipals.push(m.principal.toString());
+              }
+            }
+          }
+        }
+
+        const contentToSend =
+          encryptionReady && trimmed ? await encrypt(trimmed) : trimmed;
+
+        sendMessage(
+          {
+            conversationId: conversation.id,
+            content: contentToSend,
+            messageType: msgType,
+            mediaBlob,
+            mediaName,
+            mediaSize,
+            replyToId: replyTo ? replyTo.id : null,
+            mentionedPrincipals: encryptionReady ? mentionedPrincipals : null,
+          },
+          {
+            onSuccess: () => {
+              setText("");
+              setReplyTo(null);
+              setPendingFile(null);
+              setUploadProgress(null);
+              inputRef.current?.focus();
+            },
+            onError: () => {
+              toast.error("Failed to send message");
+              setUploadProgress(null);
+            },
+          },
+        );
         return;
       }
 
-      // Parse @mentions from plaintext before encrypting
+      // --- Text-only path: route through DTN outbox ---
+      // Parse @mentions before encrypting
       let mentionedPrincipals: string[] | null = null;
-      if (encryptionReady && trimmed && conversation.members) {
+      if (encryptionReady && conversation.members) {
         const mentionNames = parseMentions(trimmed);
         if (mentionNames.length > 0) {
           mentionedPrincipals = [];
@@ -365,69 +424,26 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
         }
       }
 
-      const contentToSend =
-        encryptionReady && trimmed ? await encrypt(trimmed) : trimmed;
+      // Encrypt if E2EE is ready
+      const contentToSend = encryptionReady ? await encrypt(trimmed) : trimmed;
 
-      sendMessage(
-        {
+      try {
+        await syncSend({
           conversationId: conversation.id,
           content: contentToSend,
-          messageType: msgType,
-          mediaBlob,
-          mediaName,
-          mediaSize,
-          replyToId: replyTo ? replyTo.id : null,
-          mentionedPrincipals: encryptionReady ? mentionedPrincipals : null,
-        },
-        {
-          onSuccess: () => {
-            setText("");
-            setReplyTo(null);
-            setPendingFile(null);
-            setUploadProgress(null);
-            inputRef.current?.focus();
-          },
-          onError: () => {
-            toast.error("Failed to send message");
-            setUploadProgress(null);
-          },
-        },
-      );
-      return;
-    }
-
-    // --- Text-only path: route through DTN outbox ---
-    // Parse @mentions before encrypting
-    let mentionedPrincipals: string[] | null = null;
-    if (encryptionReady && conversation.members) {
-      const mentionNames = parseMentions(trimmed);
-      if (mentionNames.length > 0) {
-        mentionedPrincipals = [];
-        for (const m of conversation.members) {
-          if (mentionNames.some((mn) => m.name.toLowerCase().includes(mn))) {
-            mentionedPrincipals.push(m.principal.toString());
-          }
-        }
+          messageType: "Text" as unknown as string,
+          recipientHint: conversation.members?.[0]?.principal?.toString(),
+          replyToId: replyTo ? replyTo.id : undefined,
+          mentionedPrincipals,
+        });
+        setText("");
+        setReplyTo(null);
+        inputRef.current?.focus();
+      } catch {
+        toast.error("Failed to send message");
       }
-    }
-
-    // Encrypt if E2EE is ready
-    const contentToSend = encryptionReady ? await encrypt(trimmed) : trimmed;
-
-    try {
-      await syncSend({
-        conversationId: conversation.id,
-        content: contentToSend,
-        messageType: "Text" as unknown as string,
-        recipientHint: conversation.members?.[0]?.principal?.toString(),
-        replyToId: replyTo ? replyTo.id : undefined,
-        mentionedPrincipals,
-      });
-      setText("");
-      setReplyTo(null);
-      inputRef.current?.focus();
-    } catch {
-      toast.error("Failed to send message");
+    } finally {
+      setIsSendingLocal(false);
     }
   };
 
@@ -750,7 +766,9 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
                 size="icon"
                 className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isSending || uploadProgress !== null}
+                disabled={
+                  isSending || isSendingLocal || uploadProgress !== null
+                }
               >
                 <Paperclip className="w-4 h-4" />
               </Button>
@@ -776,7 +794,9 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
                   size="icon"
                   className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
                   onClick={startRecording}
-                  disabled={isSending || uploadProgress !== null}
+                  disabled={
+                    isSending || isSendingLocal || uploadProgress !== null
+                  }
                   data-ocid="voice.toggle"
                 >
                   <Mic className="w-4 h-4" />
@@ -786,11 +806,13 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
               <Button
                 type="submit"
                 size="icon"
-                disabled={(!text.trim() && !pendingFile) || isSending}
+                disabled={
+                  (!text.trim() && !pendingFile) || isSending || isSendingLocal
+                }
                 className="h-9 w-9 shrink-0 relative"
                 data-ocid="chat.submit_button"
               >
-                {isSending ? (
+                {isSending || isSendingLocal ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Send className="w-4 h-4" />
@@ -829,6 +851,13 @@ export function ChatView({ conversation, onBack }: ChatViewProps) {
           peerName={conversation.members[0].name}
           peerPrincipal={conversation.members[0].principal.toString()}
           myPublicKeyRaw={myPublicKeyRaw}
+        />
+      )}
+      {hasPendingBackup && pendingBackupBlob && (
+        <PinUnlockModal
+          open={hasPendingBackup}
+          backupBlob={pendingBackupBlob}
+          onUnlocked={onKeysRestored}
         />
       )}
     </>

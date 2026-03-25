@@ -55,6 +55,12 @@ export function useSync(conversationId: bigint | null): UseSyncReturn {
   const conversationRef = useRef(conversationId);
   conversationRef.current = conversationId;
 
+  // Guard to prevent concurrent outbox flushes (fixes double-send race)
+  const isFlushingRef = useRef(false);
+
+  // Guard to prevent concurrent sendMessage calls (fixes rapid-click double-send)
+  const isSendingMessageRef = useRef(false);
+
   // Track online/offline
   useEffect(() => {
     const onOnline = () => setIsOnline(true);
@@ -76,38 +82,48 @@ export function useSync(conversationId: bigint | null): UseSyncReturn {
     }
   }, []);
 
-  // Flush outbox to IC
+  // Flush outbox to IC — guarded against concurrent calls to prevent double-send
   const flushOutbox = useCallback(async () => {
     if (!actor || !isOnline) return;
-    const outbox = await getOutbox();
-    if (outbox.length === 0) {
-      setOutboxCount(0);
-      return;
-    }
-    setOutboxCount(outbox.length);
-    const transport = createIcpTransport(actor);
-    for (const item of outbox) {
-      try {
-        await transport.send(item);
-        await removeFromOutbox(item.messageUuid);
-        // Mark delivered in local store
-        const updated: LocalMessage = {
-          ...item.localMessage,
-          sendStatus: "delivered",
-        };
-        await putMessage(updated);
-      } catch (e) {
-        console.warn("[useSync] outbox flush failed for", item.messageUuid, e);
-        if (item.retryCount >= MAX_RETRY_COUNT) {
-          // Give up — remove from outbox to prevent infinite retry
+    if (isFlushingRef.current) return; // already flushing, skip
+    isFlushingRef.current = true;
+    try {
+      const outbox = await getOutbox();
+      if (outbox.length === 0) {
+        setOutboxCount(0);
+        return;
+      }
+      setOutboxCount(outbox.length);
+      const transport = createIcpTransport(actor);
+      for (const item of outbox) {
+        try {
+          await transport.send(item);
           await removeFromOutbox(item.messageUuid);
-        } else {
-          await updateOutboxRetry(item.messageUuid, item.retryCount + 1);
+          // Mark delivered in local store
+          const updated: LocalMessage = {
+            ...item.localMessage,
+            sendStatus: "delivered",
+          };
+          await putMessage(updated);
+        } catch (e) {
+          console.warn(
+            "[useSync] outbox flush failed for",
+            item.messageUuid,
+            e,
+          );
+          if (item.retryCount >= MAX_RETRY_COUNT) {
+            // Give up — remove from outbox to prevent infinite retry
+            await removeFromOutbox(item.messageUuid);
+          } else {
+            await updateOutboxRetry(item.messageUuid, item.retryCount + 1);
+          }
         }
       }
+      const remaining = await getOutbox();
+      setOutboxCount(remaining.length);
+    } finally {
+      isFlushingRef.current = false;
     }
-    const remaining = await getOutbox();
-    setOutboxCount(remaining.length);
   }, [actor, isOnline]);
 
   // Fetch new messages from IC using cursor
@@ -190,24 +206,33 @@ export function useSync(conversationId: bigint | null): UseSyncReturn {
   // Send a new message: write to outbox + IndexedDB first, then flush
   const sendMessage = useCallback(
     async (params: Omit<EnvelopeParams, "senderPrincipal">) => {
-      const senderPrincipal = identity?.getPrincipal().toString() ?? "";
-      const envelope = await buildEnvelope({ ...params, senderPrincipal });
+      // Guard against concurrent sendMessage calls (rapid-click double-send)
+      if (isSendingMessageRef.current) return;
+      isSendingMessageRef.current = true;
+      try {
+        const senderPrincipal = identity?.getPrincipal().toString() ?? "";
+        const envelope = await buildEnvelope({ ...params, senderPrincipal });
 
-      // Write optimistic copy to local store immediately
-      await putMessage(envelope.localMessage);
-      setMessages((prev) => {
-        const exists = prev.some((m) => m.messageUuid === envelope.messageUuid);
-        if (exists) return prev;
-        return [...prev, envelope.localMessage];
-      });
+        // Write optimistic copy to local store immediately
+        await putMessage(envelope.localMessage);
+        setMessages((prev) => {
+          const exists = prev.some(
+            (m) => m.messageUuid === envelope.messageUuid,
+          );
+          if (exists) return prev;
+          return [...prev, envelope.localMessage];
+        });
 
-      // Queue for IC delivery
-      await addToOutbox(envelope);
-      setOutboxCount((c) => c + 1);
+        // Queue for IC delivery
+        await addToOutbox(envelope);
+        setOutboxCount((c) => c + 1);
 
-      // Attempt immediate flush
-      if (actor && isOnline) {
-        await flushOutbox();
+        // Attempt immediate flush
+        if (actor && isOnline) {
+          await flushOutbox();
+        }
+      } finally {
+        isSendingMessageRef.current = false;
       }
     },
     [actor, identity, isOnline, flushOutbox],

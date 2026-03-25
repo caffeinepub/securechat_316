@@ -9,6 +9,7 @@ import { ChatsPage } from "./components/ChatsPage";
 import { ContactsPage } from "./components/ContactsPage";
 import { LandingPage } from "./components/LandingPage";
 import { NotificationsPanel } from "./components/NotificationsPanel";
+import { PinSetupModal } from "./components/PinSetupModal";
 import { ProfileSetupDialog } from "./components/ProfileSetupDialog";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { SettingsPage } from "./components/SettingsPage";
@@ -104,6 +105,7 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
   } = useProfile();
   const { data: conversations = [] } = useConversations();
   const { data: notifications = [] } = useNotifications();
+  const { actor } = useActor();
 
   const [currentPage, setCurrentPage] = useState<Page>("chats");
   const [activeConversationId, setActiveConversationId] = useState<
@@ -111,6 +113,10 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
   >(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // PIN setup gate — checked once after profile is confirmed
+  const [pinCheckDone, setPinCheckDone] = useState(false);
+  const [needsPinSetup, setNeedsPinSetup] = useState(false);
 
   // Keyboard shortcut for search (Ctrl+K / Cmd+K)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -126,6 +132,25 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
   }, [handleKeyDown]);
 
   const hasProfile = !isProfileError && profile?.name;
+
+  // Check for existing key backup once profile is confirmed
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional
+  useEffect(() => {
+    if (!hasProfile || !actor || pinCheckDone) return;
+
+    actor
+      .getEncryptedKeyBackup()
+      .then((result) => {
+        const hasBackup = result && (result as Uint8Array).length > 0;
+        setNeedsPinSetup(!hasBackup);
+        setPinCheckDone(true);
+      })
+      .catch(() => {
+        // Treat errors as "no backup" — prompt setup
+        setNeedsPinSetup(true);
+        setPinCheckDone(true);
+      });
+  }, [hasProfile, actor]);
 
   const bellUnreadCount = notifications.filter(
     (n) => n.kind !== "NewMessage" && !n.read,
@@ -181,6 +206,32 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
         return <SettingsPage onLogout={onLogout} />;
     }
   };
+
+  // Show PIN setup gate if profile exists but no key backup found
+  if (hasProfile && pinCheckDone && needsPinSetup) {
+    return (
+      <>
+        <PinSetupModal
+          open={true}
+          required={true}
+          onClose={() => {}}
+          onComplete={() => {
+            setNeedsPinSetup(false);
+          }}
+        />
+        <Toaster position="bottom-right" />
+      </>
+    );
+  }
+
+  // Show spinner while checking for backup (only after profile is ready)
+  if (hasProfile && !pinCheckDone) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <>

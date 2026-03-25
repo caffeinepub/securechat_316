@@ -159,6 +159,9 @@ export interface _CaffeineStorageRefillResult {
 }
 export interface _SERVICE {
   '_caffeineStorageBlobIsLive' : ActorMethod<[Uint8Array], boolean>,
+  'deleteEncryptedKeyBackup' : ActorMethod<[], undefined>,
+  'getEncryptedKeyBackup' : ActorMethod<[], [] | [Uint8Array]>,
+  'storeEncryptedKeyBackup' : ActorMethod<[Uint8Array], undefined>,
   '_caffeineStorageBlobsToDelete' : ActorMethod<[], Array<Uint8Array>>,
   '_caffeineStorageConfirmBlobDeletion' : ActorMethod<
     [Array<Uint8Array>],

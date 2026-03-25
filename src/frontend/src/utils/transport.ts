@@ -90,9 +90,13 @@ export class IcpTransport implements Transport {
   }
 
   private toLocalMessage(raw: any): LocalMessage {
-    // The canister Message type does not carry DTN fields (stored separately in dtnMetadata).
-    // We derive a stable UUID from the canister-assigned message id for deduplication.
-    const uuid = `ic-${raw.conversationId.toString()}-${raw.id.toString()}`;
+    // Prefer the DTN messageUuid stored on the backend (ensures the IC-fetched
+    // version has the same UUID as the optimistic local copy so putMessage
+    // upserts rather than creating a duplicate entry).
+    const uuid =
+      raw.messageUuid && raw.messageUuid.length > 0 && raw.messageUuid[0]
+        ? raw.messageUuid[0]
+        : `ic-${raw.conversationId.toString()}-${raw.id.toString()}`;
     return {
       messageUuid: uuid,
       id: raw.id,

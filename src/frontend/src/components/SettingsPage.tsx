@@ -17,19 +17,27 @@ import {
   Eye,
   EyeOff,
   Info,
+  Key,
   Loader2,
   Lock,
   LogOut,
   Monitor,
   Moon,
   Radio,
+  RotateCcw,
   Sun,
+  Timer,
   UserSearch,
 } from "lucide-react";
 import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useActor } from "../hooks/useActor";
+import {
+  type TimeoutOption,
+  getTimeoutSetting,
+  setTimeoutSetting,
+} from "../hooks/usePinSession";
 import {
   useDiscoveryMode,
   useProfile,
@@ -41,6 +49,8 @@ import { BlockedUsersDialog } from "./BlockedUsersDialog";
 import { EditProfileDialog } from "./EditProfileDialog";
 import { EmailServiceConfig } from "./EmailServiceConfig";
 import { EmailVerificationSection } from "./EmailVerificationSection";
+import { KeyRecoveryModal } from "./KeyRecoveryModal";
+import { PinSetupModal } from "./PinSetupModal";
 import { QrSyncModal } from "./QrSyncModal";
 import { SettingsItem } from "./SettingsItem";
 import { UserAvatar } from "./UserAvatar";
@@ -218,6 +228,11 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
   const [showBlocked, setShowBlocked] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showQrSync, setShowQrSync] = useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [showRecovery, setShowRecovery] = useState(false);
+  const [sessionTimeout, setSessionTimeoutState] = useState<TimeoutOption>(() =>
+    getTimeoutSetting(),
+  );
 
   return (
     <div className="flex flex-col h-full">
@@ -299,6 +314,53 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
             </div>
           </div>
 
+          {/* Encryption & Keys */}
+          <div>
+            <h2 className="text-xs font-semibold uppercase text-muted-foreground mb-2 tracking-wider px-1">
+              Encryption & Keys
+            </h2>
+            <div className="rounded-xl border divide-y">
+              <SettingsItem
+                icon={Key}
+                label="Change PIN"
+                description="Update your on-chain key backup PIN"
+                onClick={() => setShowPinSetup(true)}
+                data-ocid="settings.change_pin.button"
+              />
+              <div className="px-4 py-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Timer className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium flex-1">
+                    Session Timeout
+                  </span>
+                </div>
+                <select
+                  value={sessionTimeout}
+                  onChange={(e) => {
+                    const val = e.target.value as TimeoutOption;
+                    setTimeoutSetting(val);
+                    setSessionTimeoutState(val);
+                  }}
+                  className="w-full text-sm bg-background border border-border rounded-lg px-3 py-2 text-foreground outline-none focus:ring-2 focus:ring-amber-500/30"
+                  data-ocid="settings.session_timeout.select"
+                >
+                  <option value="5min">5 minutes</option>
+                  <option value="10min">10 minutes</option>
+                  <option value="30min">30 minutes</option>
+                  <option value="1hr">1 hour</option>
+                  <option value="never">Never</option>
+                </select>
+              </div>
+              <SettingsItem
+                icon={RotateCcw}
+                label="Recovery Code"
+                description="Generate a one-time code to restore keys on another device"
+                onClick={() => setShowRecovery(true)}
+                data-ocid="settings.recovery_code.button"
+              />
+            </div>
+          </div>
+
           {/* Mesh Sync */}
           <div>
             <h2 className="text-xs font-semibold uppercase text-muted-foreground mb-2 tracking-wider px-1">
@@ -354,6 +416,18 @@ export function SettingsPage({ onLogout }: SettingsPageProps) {
       )}
 
       <BlockedUsersDialog open={showBlocked} onOpenChange={setShowBlocked} />
+      <PinSetupModal
+        open={showPinSetup}
+        onClose={() => setShowPinSetup(false)}
+        onComplete={() => setShowPinSetup(false)}
+        data-ocid="settings.pin_setup.dialog"
+      />
+      <KeyRecoveryModal
+        open={showRecovery}
+        mode="generate"
+        onClose={() => setShowRecovery(false)}
+        data-ocid="settings.key_recovery.dialog"
+      />
 
       {actor && (
         <QrSyncModal

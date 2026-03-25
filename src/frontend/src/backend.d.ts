@@ -166,6 +166,9 @@ export enum NotificationKind {
 }
 export interface backendInterface {
     acceptContactRequest(from: Principal): Promise<void>;
+    deleteEncryptedKeyBackup(): Promise<void>;
+    getEncryptedKeyBackup(): Promise<Uint8Array | null>;
+    storeEncryptedKeyBackup(encryptedBlob: Uint8Array): Promise<void>;
     addContactByPrincipal(principalText: string): Promise<void>;
     addGroupMember(conversationId: bigint, member: Principal): Promise<void>;
     addReaction(conversationId: bigint, messageId: bigint, emoji: string): Promise<void>;

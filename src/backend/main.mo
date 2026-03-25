@@ -259,6 +259,7 @@ actor {
   // vetKD encrypted email config
   var userEncryptedEmailConfigs : Map.Map<Principal, EncryptedEmailConfig> = Map.empty();
   var syncSessions : Map.Map<Text, SyncSession> = Map.empty();
+  var userKeyBackups : Map.Map<Principal, Blob> = Map.empty();
   var nextSyncSessionId : Nat = 1;
 
   // Constants
@@ -2421,6 +2422,24 @@ actor {
       case (?session) { ?(session.offer, session.answer) };
       case null { null };
     }
+  };
+
+
+  // --- Key Backup (PIN-encrypted E2EE key storage) ---
+
+  public shared ({ caller }) func storeEncryptedKeyBackup(encryptedBlob : Blob) : async () {
+    requireAuth(caller);
+    userKeyBackups.add(caller, encryptedBlob);
+  };
+
+  public query ({ caller }) func getEncryptedKeyBackup() : async ?Blob {
+    requireAuth(caller);
+    userKeyBackups.get(caller);
+  };
+
+  public shared ({ caller }) func deleteEncryptedKeyBackup() : async () {
+    requireAuth(caller);
+    userKeyBackups.remove(caller);
   };
 
 };
