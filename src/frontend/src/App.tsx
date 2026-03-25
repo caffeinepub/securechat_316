@@ -24,6 +24,12 @@ import {
   useTwoFactorStatus,
 } from "./hooks/useQueries";
 import { ThemeProvider } from "./hooks/useTheme";
+import {
+  exportKeyPairAsJwk,
+  exportPublicKey,
+  generateKeyPair,
+} from "./utils/e2ee";
+import { getKeyPair, saveKeyPair } from "./utils/keyStore";
 
 export default function App() {
   return (
@@ -98,6 +104,7 @@ function AppContent() {
 }
 
 function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
+  const { identity } = useInternetIdentity();
   const {
     data: profile,
     isLoading: isLoadingProfile,
@@ -138,15 +145,47 @@ function AuthenticatedApp({ onLogout }: { onLogout: () => void }) {
   useEffect(() => {
     if (!hasProfile || !actor || pinCheckDone) return;
 
+    const myPrincipal = identity?.getPrincipal().toString() ?? "";
+
     actor
       .getEncryptedKeyBackup()
-      .then((result) => {
+      .then(async (result) => {
         const hasBackup = result && (result as Uint8Array).length > 0;
+        if (!hasBackup && myPrincipal) {
+          // No backup exists — ensure we have a local key pair generated and
+          // published BEFORE showing PinSetupModal, so exportAllKeys() picks it up.
+          const existing = await getKeyPair(myPrincipal);
+          if (!existing) {
+            const kp = await generateKeyPair();
+            const jwk = await exportKeyPairAsJwk(kp);
+            await saveKeyPair(myPrincipal, jwk);
+            const pubRaw = await exportPublicKey(kp.publicKey);
+            try {
+              await actor.publishPublicKey(pubRaw);
+            } catch {
+              // Acceptable — may already be published
+            }
+          }
+        }
         setNeedsPinSetup(!hasBackup);
         setPinCheckDone(true);
       })
-      .catch(() => {
-        // Treat errors as "no backup" — prompt setup
+      .catch(async () => {
+        // Treat errors as "no backup" — still ensure key pair exists
+        if (myPrincipal) {
+          const existing = await getKeyPair(myPrincipal);
+          if (!existing) {
+            const kp = await generateKeyPair();
+            const jwk = await exportKeyPairAsJwk(kp);
+            await saveKeyPair(myPrincipal, jwk);
+            const pubRaw = await exportPublicKey(kp.publicKey);
+            try {
+              await actor.publishPublicKey(pubRaw);
+            } catch {
+              /* ok */
+            }
+          }
+        }
         setNeedsPinSetup(true);
         setPinCheckDone(true);
       });
